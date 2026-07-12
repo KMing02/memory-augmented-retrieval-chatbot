@@ -4,9 +4,12 @@ import {
 	useChatMessages,
 	useChatInteract,
 	useChatData,
+	sessionIdState,
 } from "@chainlit/react-client";
-import { createChat } from "../api";
+import { useRecoilState } from "recoil";
+import { createChat, endChat, forkChat } from "../api";
 import { useNavigate } from "react-router-dom";
+import { v4 as uuidv4 } from "uuid";
 
 function Message({ msg }) {
 	const isUser = msg.type === "user_message";
@@ -49,9 +52,11 @@ function Message({ msg }) {
 
 export default function ChainlitChat({ chatId }) {
 	const { setIdToResume, sendMessage } = useChatInteract();
-	const { connect } = useChatSession();
+	const { connect, disconnect, idToResume } = useChatSession();
 	const { messages } = useChatMessages();
 	const { loading, connected } = useChatData();
+	const [sessionId, setSessionId] = useRecoilState(sessionIdState);
+	const [targetSessionId] = useState(() => uuidv4());
 	const [input, setInput] = useState("");
 	const scrollRef = useRef(null);
 	const hasConnected = useRef(false);
@@ -59,12 +64,44 @@ export default function ChainlitChat({ chatId }) {
 
 	useEffect(() => {
 		if (hasConnected.current) return;
-		hasConnected.current = true;
-		if (chatId) {
-			setIdToResume(chatId);
+
+		let pendingUpdate = false;
+
+		if (sessionId !== targetSessionId) {
+			setSessionId(targetSessionId);
+			pendingUpdate = true;
 		}
+
+		if (chatId && idToResume !== chatId) {
+			setIdToResume(chatId);
+			pendingUpdate = true;
+		}
+		if (!chatId && idToResume) {
+			setIdToResume(undefined);
+			pendingUpdate = true;
+		}
+
+		if (pendingUpdate) return; // Wait for Recoil state to sync
+
+		hasConnected.current = true;
 		connect({ userEnv: {} });
-	}, [chatId, setIdToResume, connect]);
+
+		return () => {
+			if (connect && typeof connect.cancel === "function") {
+				connect.cancel();
+			}
+			disconnect();
+		};
+	}, [
+		chatId,
+		idToResume,
+		setIdToResume,
+		connect,
+		disconnect,
+		sessionId,
+		targetSessionId,
+		setSessionId,
+	]);
 
 	useEffect(() => {
 		if (scrollRef.current) {
@@ -89,6 +126,37 @@ export default function ChainlitChat({ chatId }) {
 		}
 	};
 
+	const handleEndChat = async () => {
+		if (!chatId) return;
+		try {
+			await endChat(chatId);
+			navigate(`/chats`);
+		} catch (err) {
+			console.error(err);
+			alert("Failed to end chat");
+		}
+	};
+
+	const handleForkChat = async () => {
+		if (!chatId) return;
+		try {
+			const { chat_id } = await forkChat(chatId);
+			navigate(`/chat/${chat_id}`);
+		} catch (err) {
+			console.error(err);
+			alert("Failed to fork chat");
+		}
+	};
+
+	const flatMessages = [];
+	const flatten = (msgs) => {
+		msgs.forEach((m) => {
+			flatMessages.push(m);
+			if (m.steps) flatten(m.steps);
+		});
+	};
+	flatten(messages);
+
 	return (
 		<div className="flex flex-col h-full bg-background w-full">
 			{/* Messages Area */}
@@ -102,7 +170,7 @@ export default function ChainlitChat({ chatId }) {
 						Connecting to chat server...
 					</div>
 				)}
-				{messages.map((msg) => (
+				{flatMessages.map((msg) => (
 					<Message key={msg.id} msg={msg} />
 				))}
 				{loading && (
@@ -117,8 +185,9 @@ export default function ChainlitChat({ chatId }) {
 				<div className="max-w-4xl mx-auto flex flex-col gap-sm">
 					<div className="flex gap-sm items-center">
 						<button
-							className="bg-dusty-grape/20 border border-lilac-ash/30 text-almond-silk px-3 py-1 rounded-sm text-label-sm flex items-center gap-xs opacity-50 cursor-not-allowed"
-							disabled
+							onClick={handleEndChat}
+							disabled={!connected}
+							className="bg-dusty-grape/20 border border-lilac-ash/30 text-almond-silk px-3 py-1 rounded-sm text-label-sm flex items-center gap-xs hover:bg-dusty-grape/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 						>
 							<span className="material-symbols-outlined text-[14px]">
 								stop_circle
@@ -128,6 +197,7 @@ export default function ChainlitChat({ chatId }) {
 						<button
 							className="bg-dusty-grape/20 border border-lilac-ash/30 text-almond-silk px-3 py-1 rounded-sm text-label-sm flex items-center gap-xs opacity-50 cursor-not-allowed"
 							disabled
+							title="Document upload coming soon"
 						>
 							<span className="material-symbols-outlined text-[14px]">
 								upload_file
@@ -135,8 +205,9 @@ export default function ChainlitChat({ chatId }) {
 							Upload Doc
 						</button>
 						<button
-							className="bg-dusty-grape/20 border border-lilac-ash/30 text-almond-silk px-3 py-1 rounded-sm text-label-sm flex items-center gap-xs opacity-50 cursor-not-allowed"
-							disabled
+							onClick={handleForkChat}
+							disabled={!connected}
+							className="bg-dusty-grape/20 border border-lilac-ash/30 text-almond-silk px-3 py-1 rounded-sm text-label-sm flex items-center gap-xs hover:bg-dusty-grape/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 						>
 							<span className="material-symbols-outlined text-[14px]">
 								call_split
