@@ -5,6 +5,16 @@ typed-memory chatbot. The system combines Chainlit, SQLite, Chroma, and
 an OpenAI-compatible model endpoint to answer from recent conversation,
 cross-chat memory, and uploaded documents.
 
+## Project context and contributions
+
+This repository is my post-project fork of a two-person TUM practical-course
+project developed together with Josef Bureš.
+
+My contributions included work on the memory/retrieval architecture and
+evaluation, including routing, candidate retrieval, reranking, context-assembly
+design, and proposing an LLM-assisted semantic-routing extension to the initial
+rule-based router.
+
 The default orchestration mode is `native` with a fast cross-encoder reranker
 (MiniLM). A quality mode (mxbai) is available via startup flag but is
 **experimental** — it has not been optimized or fully tested due to the
