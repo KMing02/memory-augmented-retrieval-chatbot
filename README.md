@@ -278,8 +278,6 @@ The prototype intentionally keeps some constraints visible:
 - long-term memory vectors use sqlite-vec (in-process), not a standalone vector DB;
 - quality limitations on broad summarization, multi-hop reasoning, and some
   long-memory benchmark families;
-- `MEMORY_REPLAY_MAX_MESSAGES` has a known discrepancy: settings.py pushes 128,
-  but the Python constant in `constants.py` is 2.
 
 See [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md).
 

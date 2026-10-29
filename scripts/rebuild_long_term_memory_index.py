@@ -12,26 +12,26 @@ if str(ROOT_DIR) not in sys.path:
 
 def main() -> int:
     """Rebuild the semantic vector index for long-term structured memories."""
-    from src.config import AppConfig
-    from src.database import Database
-from src.memory.long_term_store import SQLiteLongTermMemoryStore
-from src.memory.long_term_vector_index import (
-    LongTermMemoryVectorIndex,
-    VectorIndexUnavailable,
-)
-
     parser = argparse.ArgumentParser(
-        description="Index SQLite long-term memories into the semantic Chroma index."
+        description="Index SQLite long-term memories into the semantic sqlite-vec index."
     )
     parser.add_argument("--limit-namespaces", type=int, default=100)
     args = parser.parse_args()
+
+    from src.config import AppConfig
+    from src.database import Database
+    from src.memory.long_term_store import SQLiteLongTermMemoryStore
+    from src.memory.long_term_vector_index import (
+        LongTermMemoryVectorIndex,
+        VectorIndexUnavailable,
+    )
 
     config = AppConfig.from_env()
     database = Database(config.database_path)
     store = SQLiteLongTermMemoryStore(database)
     namespaces = store.list_namespaces(limit=args.limit_namespaces)
     vector_index = LongTermMemoryVectorIndex(
-        database_path=config.database_path,
+        database=database,
         embedding_model_name=config.embedding_model_name,
     )
 

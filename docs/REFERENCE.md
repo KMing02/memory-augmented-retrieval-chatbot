@@ -211,7 +211,7 @@ All variables from `src/settings.py` (single source of truth), loaded into `AppC
 | `MEMORY_RECENT_PROTECTION_TOKENS` | 1500 | Recent tokens protected from summarization |
 | `MEMORY_REPLAY_TRIGGER_TOKENS` | 4000 | Unsummarized tokens before replay trigger |
 | `MEMORY_REPLAY_MAX_INPUT_TOKENS` | 8000 | Max tokens per replay batch |
-| `MEMORY_REPLAY_MAX_MESSAGES` | 128 ⚠ | Max messages per replay batch. ⚠ Discrepancy: `settings.py` pushes `128` into env; `src/memory/constants.py` hardcodes `2` as Python fallback. Runtime uses env value (128 from settings.py). |
+| `MEMORY_REPLAY_MAX_MESSAGES` | 128 | Max messages per replay batch, passed from settings through AppConfig. |
 | `PREVIOUS_CHAT_GIST_EXTRACTOR` | `llm` | `deterministic` or `llm`; LLM mode falls back deterministically |
 | `PREVIOUS_CHAT_GIST_MAX_MESSAGES_PER_GIST` | 5 | Max messages per previous-chat gist batch |
 

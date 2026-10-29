@@ -254,3 +254,19 @@ evals/document_qa/datasets/nq_subset.jsonl
 
 # Node modules (web app)
 **/node_modules/
+
+# Runtime databases, including backups and SQLite sidecars
+data/**/*.db
+data/**/*.db-*
+data/**/*.db.*
+data/**/*.sqlite
+data/**/*.sqlite-*
+data/**/*.sqlite.*
+data/**/*.sqlite3
+data/**/*.sqlite3-*
+data/**/*.sqlite3.*
+data/chroma_db/
+
+# Rejected patches and editor backups
+*.orig
+*.rej

@@ -16,11 +16,10 @@ rm -rf data/chroma
 # Then restart the app. Re-upload documents if needed.
 ```
 
-If only long-term memory vectors are affected:
+Long-term memory vectors use sqlite-vec in the application SQLite database,
+not Chroma. To rebuild them from structured-memory records:
 
 ```bash
-rm -rf data/chroma/long_term_memory*
-# Then run the rebuild script:
 python scripts/rebuild_long_term_memory_index.py
 ```
 
