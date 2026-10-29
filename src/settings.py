@@ -25,7 +25,7 @@ def _setenv(name: str, value: str) -> None:
 
 OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "dummy")
 OPENAI_BASE_URL: str = os.getenv("OPENAI_BASE_URL", "http://localhost:11434/v1")
-MODEL_NAME: str = os.getenv("MODEL_NAME", "google/gemma-4-31B-it")
+MODEL_NAME: str = os.getenv("MODEL_NAME", "qwen2.5:3b")
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Database

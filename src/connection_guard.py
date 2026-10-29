@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import os
 from time import monotonic
-from urllib.parse import urljoin, urlsplit, urlunsplit
+from urllib.parse import urlsplit, urlunsplit
 
 import httpx
 
@@ -184,6 +184,6 @@ class ConnectionGuard:
 
 def connection_guard_from_env() -> ConnectionGuard:
     """Create a guard for the configured inference server."""
-    return ConnectionGuard(
-        base_url=os.getenv("OPENAI_BASE_URL", "http://localhost:11434/v1"),
-    )
+    from src.providers import resolve_provider
+
+    return ConnectionGuard(base_url=resolve_provider().base_url)

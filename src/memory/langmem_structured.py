@@ -13,6 +13,7 @@ from src.connection_guard import (
     connection_guard_from_env,
 )
 from src.database import StoredMessage
+from src.providers import resolve_provider
 from src.memory.long_term_store import (
     LongTermMemoryRecord,
     LongTermMemoryStore,
@@ -264,10 +265,11 @@ class LangMemBackendConfig:
     @classmethod
     def from_env(cls, model_name: str | None = None) -> "LangMemBackendConfig":
         """Load OpenAI-compatible model settings from the existing environment."""
+        provider = resolve_provider()
         return cls(
-            openai_api_key=os.getenv("OPENAI_API_KEY", "dummy"),
-            openai_base_url=os.getenv("OPENAI_BASE_URL", "http://localhost:11434/v1"),
-            model_name=model_name or os.getenv("MODEL_NAME", "google/gemma-4-31B-it"),
+            openai_api_key=provider.api_key,
+            openai_base_url=provider.base_url,
+            model_name=model_name or provider.model,
         )
 
 
