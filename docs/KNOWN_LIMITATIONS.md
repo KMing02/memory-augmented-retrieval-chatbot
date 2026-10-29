@@ -17,14 +17,11 @@ current and intentional unless otherwise noted.
   every possible write path.
 - Document upload locks are process-local.
 - There is no background reconciliation job for stale document states.
-- There is no coordinated automatic deletion of Chroma chunks when document
-  metadata is removed or superseded.
-- `LONG_TERM_MEMORY_CHROMA_PERSIST_DIR` defaults to the same path as
-  `LANGCHAIN_CHROMA_PERSIST_DIR`. If a single Chroma directory holds both
-  document chunks and long-term memory vectors, collection collision is
-  possible.
+- Explicit document deletion attempts Chroma cleanup and returns warnings on
+  failure. There is no background reconciliation of orphaned document chunks.
+- Structured-memory vectors use sqlite-vec, not a second Chroma collection.
 - Memory update is LLM-backed (LangMem). When the model call fails, the error
-  is caught silently — the user receives a successful answer but no new
+  is logged — the user receives a successful answer but no new
   structured memories are extracted that turn. Unprocessed messages remain
   queued for the next successful turn.
 
@@ -48,9 +45,8 @@ current and intentional unless otherwise noted.
   constrained by a weak laptop; retrieval quality, latency, and correctness
   in `--cross-encoder` mode are not yet characterised.  Prefer `--hybrid`
   (the default) for reproducible evaluations and demos.
-- Cross-encoder and LLM reranking are the supported reranker modes until "cross_encoder"
-  is properly validated. `RERANKER_MODE` defaults to `cross_encoder` but changes
-  to `hybrid` when `RERANKER_STARTUP_MODE=hybrid`.
+- Hybrid MiniLM reranking is the normal application startup mode. Heavier
+  cross-encoder and LLM reranking paths require separate quality/latency validation.
 - Token counting relies on a Gemma-specific tokenizer loaded from Hugging
   Face. On any load or tokenization error, the estimator silently falls back
   to approximate character-based counting (4 chars/token), which can cause
@@ -101,7 +97,7 @@ current and intentional unless otherwise noted.
 
 ## Evaluation
 
-- Product Behavior has two documented remaining failures:
+- Historical Product Behavior reporting documented two unsupported cases:
   `PB-PERSIST-005` and `PB-FAIL-010`.
 - Browser E2E validation requires local browser and localhost port access.
   Restricted sandboxes can block those tests before application startup.

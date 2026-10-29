@@ -9,7 +9,7 @@ diagnostics, retrieval logs).
 
 ```bash
 cd braemon
-npm install
+PUPPETEER_SKIP_DOWNLOAD=true npm ci
 npm run dev
 ```
 
@@ -47,3 +47,16 @@ The Python backend must be running first (`uv run python startup.py -w`).
 | `src/components/ModelLoadingScreen.jsx` | Startup gate: polls backend until models ready |
 
 See `.doc.md` for comprehensive documentation.
+
+## Isolated smoke verification
+
+From the repository root, after installing dependencies:
+
+```bash
+uv run pytest -q tests/e2e/test_react_smoke.py -m browser
+```
+
+This checks the real SPA against a synthetic, deterministic backend, including
+chat responses and End Chat. It does not call a paid provider. The Vite proxy
+accepts `VITE_BACKEND_URL` (default `http://localhost:8000`); the root launcher
+sets this automatically for its backend port. See `docs/TESTING.md`.

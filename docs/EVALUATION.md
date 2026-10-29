@@ -15,7 +15,7 @@ ORCHESTRATION_MODE=langgraph_demo \
 uv run python -m evals.product_behavior.runner
 ```
 
-Expected current result in a full local environment:
+Historical course result (not reproduced by this portfolio update):
 
 ```text
 48 passed
@@ -63,7 +63,7 @@ MAB role-less benchmark history is replayed as raw messages and finalized with
 production persistence/gist behavior. Personal structured-memory extraction is
 not applicable to role-less benchmark context and is skipped explicitly.
 
-Established held-out result:
+Historical held-out result (not rerun here):
 
 ```text
 semantic valid:        10 / 27
@@ -89,7 +89,7 @@ Current frozen manifest:
 LongMemEval metrics and gold-session failure-stage heuristics are approximate
 and should be reported as pilot evidence.
 
-Corrected frozen-answer pilot result:
+Historical corrected frozen-answer pilot result (not rerun here):
 
 ```text
 semantic valid:        12 / 16
