@@ -96,8 +96,7 @@ def test_production_previous_chat_raw_child_folds_gist_in_context_packet(
     assert included[0].metadata["parent_gist_id"] == gist_id
     assert included[0].source_message_ids == [start_id, end_id]
     assert any(
-        "Raw Message Span:" in message["content"]
-        and "rollback rehearsal" in message["content"]
+        "Raw Message Span:" in message["content"] and "rollback rehearsal" in message["content"]
         for message in result.context_packet.model_messages
     )
     assert_source_budgets_respect_total(result)
@@ -126,20 +125,22 @@ def test_ended_chat_gist_routes_by_intent_and_expands_exact_evidence(
         orientation_plan,
     )
 
-    exact_query = (
-        "What exact phrase did I use in the previous chat about deployment?"
-    )
+    exact_query = "What exact phrase did I use in the previous chat about deployment?"
     exact_plan = RoutePlanner().plan(exact_query)
     exact_candidates = RetrieverDispatcher(database).retrieve(
         "new-chat",
         exact_plan,
     )
-    exact_context = ContextManagerAgent().build_context_packet(
-        system_prompt="Use exact persisted evidence.",
-        latest_user_message={"role": "user", "content": exact_query},
-        ranked_candidates=exact_candidates,
-        route_plan=exact_plan,
-    ).context_packet
+    exact_context = (
+        ContextManagerAgent()
+        .build_context_packet(
+            system_prompt="Use exact persisted evidence.",
+            latest_user_message={"role": "user", "content": exact_query},
+            ranked_candidates=exact_candidates,
+            route_plan=exact_plan,
+        )
+        .context_packet
+    )
 
     casual_plan = RoutePlanner().plan("How are you?")
     casual_candidates = RetrieverDispatcher(database).retrieve(
@@ -148,10 +149,7 @@ def test_ended_chat_gist_routes_by_intent_and_expands_exact_evidence(
     )
 
     assert end_result.gist_count == 1
-    assert any(
-        candidate.source == "previous_chat_gist"
-        for candidate in orientation_candidates
-    )
+    assert any(candidate.source == "previous_chat_gist" for candidate in orientation_candidates)
     raw = next(
         candidate
         for candidate in exact_candidates
@@ -167,8 +165,7 @@ def test_ended_chat_gist_routes_by_intent_and_expands_exact_evidence(
         if candidate.source == "raw_message_span"
     )
     assert any(
-        candidate.source == "raw_message_span"
-        and exact_sentence in candidate.content
+        candidate.source == "raw_message_span" and exact_sentence in candidate.content
         for candidate in exact_context.candidates
     )
     assert all(
@@ -225,15 +222,18 @@ def test_production_recent_messages_keep_old_fact_and_current_query_once(
     ]
     assert all(candidate.source_message_ids for candidate in recent)
     assert current_id not in result.context_packet.recent_message_ids
-    assert [
-        message["content"] for message in result.context_packet.model_messages
-    ].index("Earlier fact: the staging environment is named cobalt.") < [
-        message["content"] for message in result.context_packet.model_messages
-    ].index("I will remember that staging is cobalt.")
-    assert sum(
-        message["role"] == "user" and message["content"] == query
-        for message in result.context_packet.model_messages
-    ) == 1
+    assert [message["content"] for message in result.context_packet.model_messages].index(
+        "Earlier fact: the staging environment is named cobalt."
+    ) < [message["content"] for message in result.context_packet.model_messages].index(
+        "I will remember that staging is cobalt."
+    )
+    assert (
+        sum(
+            message["role"] == "user" and query in message["content"]
+            for message in result.context_packet.model_messages
+        )
+        == 1
+    )
     assert_source_budgets_respect_total(result)
 
 
@@ -269,9 +269,7 @@ def test_explicit_raw_span_drill_down_reaches_context_with_provenance(
     route_plan = replace(
         production_plan,
         sources=[
-            source
-            for source in production_plan.sources
-            if source.source != "raw_message_span"
+            source for source in production_plan.sources if source.source != "raw_message_span"
         ]
         + [raw_plan],
     )
@@ -336,15 +334,12 @@ def test_production_disabled_previous_gist_does_not_retrieve_or_reach_context(
     )
 
     previous_plan = next(
-        source
-        for source in route_plan.sources
-        if source.source == "previous_chat_gist"
+        source for source in route_plan.sources if source.source == "previous_chat_gist"
     )
     assert previous_plan.enabled is False
     assert result.context_budget.source_token_budgets.get("previous_chat_gist", 0) == 0
     assert all(
-        candidate.source != "previous_chat_gist"
-        for candidate in result.context_packet.candidates
+        candidate.source != "previous_chat_gist" for candidate in result.context_packet.candidates
     )
     assert all(
         "Previous Chat Gist:" not in message["content"]

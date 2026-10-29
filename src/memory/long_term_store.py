@@ -58,6 +58,8 @@ def category_namespace(category: str, source_chat_id: str | None = None) -> tupl
 def structured_memory_namespaces(chat_id: str | None = None) -> list[tuple[str, ...]]:
     """Return namespaces consulted for structured-memory retrieval."""
     namespaces = [
+        DEFAULT_USER_NAMESPACE,
+        DEFAULT_PROJECT_NAMESPACE,
         ("memory", "past_events"),
         ("memory", "user_experiences"),
         ("memory", "user_facts"),
@@ -227,6 +229,7 @@ class SQLiteLongTermMemoryStore:
     ) -> None:
         self.database = database
         self.vector_sync = vector_sync
+        self.last_sync_error: Exception | None = None
         mode = (
             (retrieval_mode or os.getenv("STRUCTURED_MEMORY_RETRIEVAL_MODE", "sqlite"))
             .strip()
@@ -302,15 +305,13 @@ class SQLiteLongTermMemoryStore:
             raise RuntimeError(
                 f"Structured-memory SQLite upsert missing after commit: {record.memory_id}"
             )
+        self.last_sync_error = None
         if self.vector_sync is not None:
             try:
                 self.vector_sync.sync_record(stored)
-            except Exception:
-                _LOGGER.exception(
-                    "vec0 sync failed for memory_id=%s namespace=%s",
-                    record.memory_id,
-                    namespace_path(record.namespace),
-                )
+            except Exception as error:
+                self.last_sync_error = error
+                _LOGGER.exception("Structured memory committed; vector synchronization failed")
 
     def get(self, namespace: tuple[str, ...], memory_id: str) -> LongTermMemoryRecord | None:
         """Get one memory row by namespace and key."""

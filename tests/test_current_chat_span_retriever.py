@@ -31,7 +31,7 @@ def enabled_span_plan(
             filters=filters or {},
         )
         if source.source == "current_chat_span"
-        else source
+        else replace(source, enabled=False)
         for source in production_plan.sources
     ]
     return replace(production_plan, sources=sources)
@@ -266,7 +266,7 @@ def test_current_chat_span_is_disabled_by_default_but_works_when_enabled(
 
     source = next(source for source in default_plan.sources if source.source == "current_chat_span")
     assert source.enabled is False
-    assert default_candidates == []
+    assert not [c for c in default_candidates if c.source == "current_chat_span"]
     assert len(enabled_candidates) == 1
 
 

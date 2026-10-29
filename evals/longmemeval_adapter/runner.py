@@ -132,8 +132,17 @@ def run_adapter(
     if answer_mode == "model" and model is None:
         model = configured_model()
     selected_reranker_mode = (
-        reranker_mode or os.getenv("RERANKER_MODE", "deterministic")
-    ).strip().lower()
+        (
+            reranker_mode
+            or (
+                "deterministic"
+                if answer_mode == "mock"
+                else os.getenv("RERANKER_MODE", "deterministic")
+            )
+        )
+        .strip()
+        .lower()
+    )
 
     results = [
         run_case(
@@ -225,15 +234,11 @@ def run_case(
         latency_ms = round((perf_counter() - started) * 1000, 2)
         retrieved = turn.trace.retrieved_candidates
         context_candidates = (
-            turn.trace.context_packet.candidates
-            if turn.trace.context_packet is not None
-            else []
+            turn.trace.context_packet.candidates if turn.trace.context_packet is not None else []
         )
         reranker_trace = turn.trace.metadata.get("reranker")
         cross_encoder_used = bool(
-            reranker_trace.get("cross_encoder_used")
-            if isinstance(reranker_trace, dict)
-            else False
+            reranker_trace.get("cross_encoder_used") if isinstance(reranker_trace, dict) else False
         )
         score = score_case(
             case,
@@ -255,13 +260,9 @@ def run_case(
             "reranker_mode": reranker_mode,
             "cross_encoder_used": cross_encoder_used,
             "retrieved_sources": sorted({candidate.source for candidate in retrieved}),
-            "retrieved_candidates": [
-                candidate_summary(candidate) for candidate in retrieved
-            ],
+            "retrieved_candidates": [candidate_summary(candidate) for candidate in retrieved],
             "retrieved_candidate_count": len(retrieved),
-            "context_packet_sources": [
-                candidate.source for candidate in context_candidates
-            ],
+            "context_packet_sources": [candidate.source for candidate in context_candidates],
             "context_candidate_count": len(context_candidates),
             "context_included": bool(context_candidates),
             "query_echo_excluded": True,
@@ -278,10 +279,7 @@ class PriorRecentMessagesRetriever(RecentMessagesRetriever):
         return [
             candidate
             for candidate in candidates
-            if not (
-                candidate.metadata.get("role") == "user"
-                and candidate.content.strip() == query
-            )
+            if not (candidate.metadata.get("role") == "user" and candidate.content.strip() == query)
         ]
 
 
@@ -305,9 +303,7 @@ def seed_previous_session_gists(database: Database, case: LongMemEvalCase) -> No
             database.save_message(chat_id, message.role, message.content)
             for message in session.messages
         ]
-        gist_text = "\n".join(
-            f"{message.role}: {message.content}" for message in session.messages
-        )
+        gist_text = "\n".join(f"{message.role}: {message.content}" for message in session.messages)
         database.insert_chat_gist(
             chat_id=chat_id,
             source_type="previous_chat_gist",
@@ -387,16 +383,12 @@ def trace_summary(trace: Any) -> dict[str, Any]:
     return {
         "trace_id": trace.trace_id,
         "active_sources": [
-            source.source
-            for source in (route_plan.sources if route_plan else [])
-            if source.enabled
+            source.source for source in (route_plan.sources if route_plan else []) if source.enabled
         ],
         "routing": json_safe(trace.metadata.get("routing_decision")),
         "reranker": json_safe(trace.metadata.get("reranker")),
         "context_manager": json_safe(trace.metadata.get("context_manager")),
-        "context_sections": list(
-            packet.metadata.get("section_order", []) if packet else []
-        ),
+        "context_sections": list(packet.metadata.get("section_order", []) if packet else []),
         "prompt_source": trace.metadata.get("prompt_source"),
         "fallback_reason": trace.metadata.get("fallback_reason"),
         "errors": list(trace.errors),
@@ -412,13 +404,10 @@ def build_reranker(mode: str, model: ModelLike | None) -> MemoryReranker:
         llm_top_k=config.reranker_llm_top_k,
         llm_min_confidence=config.reranker_llm_min_confidence,
         cross_encoder_model=config.reranker_cross_encoder_model,
-        cross_encoder_top_k=config.reranker_cross_encoder_top_k,
         cross_encoder_weight=config.reranker_cross_encoder_weight,
         hybrid_backend=config.reranker_hybrid_backend,
         llm_ambiguity_margin=config.reranker_llm_ambiguity_margin,
-        llm_require_cross_source_conflict=(
-            config.reranker_llm_require_cross_source_conflict
-        ),
+        llm_require_cross_source_conflict=(config.reranker_llm_require_cross_source_conflict),
         llm_provenance_queries=config.reranker_llm_provenance_queries,
     )
 

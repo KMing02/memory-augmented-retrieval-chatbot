@@ -250,7 +250,7 @@ def test_langmem_update_preserves_existing_memory_records(tmp_path: Path) -> Non
     records = json.loads(db.chat_memory_state("chat") or "{}")["memories"]
     assert {record["id"] for record in records} == {
         "user_facts:name",
-        "preferences:response_style",
+        "user_preferences:response_style",
     }
 
 

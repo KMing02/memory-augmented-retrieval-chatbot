@@ -141,7 +141,7 @@ def test_cross_chat_structured_memory_is_visible_across_chats(tmp_path: Path) ->
 
     assert candidates
     assert candidates[0].source == "structured_memory"
-    assert candidates[0].metadata["namespace"] == list(DEFAULT_USER_NAMESPACE)
+    assert candidates[0].metadata["namespace"] == ["memory", "user_preferences"]
     assert candidates[0].metadata["source_chat_id"] == "chat-a"
     assert candidates[0].content == "User prefers concise answers."
     assert candidates[0].source_message_ids == [first_id]

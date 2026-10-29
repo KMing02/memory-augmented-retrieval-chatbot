@@ -22,7 +22,6 @@ from src.memory.memory_trace import (
 )
 from src.model_wrapper import ModelWrapper
 from src.orchestration.demo_orchestration import (
-    NATIVE,
     normalize_orchestration_mode,
 )
 from src.retrieval.langchain_chroma_retriever import LangChainChromaUnavailable
@@ -584,7 +583,18 @@ def format_orchestration_trace_summary(result: object) -> str:
     requested = str(orchestration.get("requested_mode", "native"))
     effective = str(orchestration.get("effective_mode", requested))
     fallback = bool(orchestration.get("fallback_used"))
-    return f"{effective}" + (" (fallback)" if fallback else "")
+    graph = orchestration.get("langgraph_trace", {})
+    graph = graph if isinstance(graph, dict) else {}
+    routing = graph.get("routing", {})
+    routing = routing if isinstance(routing, dict) else {}
+    intents = [
+        str(item.get("intent", ""))[:64]
+        for item in routing.get("intents", [])[:4]
+        if isinstance(item, dict)
+    ]
+    sources = [str(source)[:32] for source in graph.get("route_sources", [])[:8]]
+    details = ", ".join([*intents, *sources])
+    return (effective[:64] + (" (fallback)" if fallback else "") + ": " + details)[:1000]
 
 
 # Legacy alias for backward compatibility with older callers.

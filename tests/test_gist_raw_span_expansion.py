@@ -60,6 +60,13 @@ def test_finalized_previous_gist_expands_to_exact_raw_context(
     database.create_chat("current-chat")
     query = "What did we discuss last time about the rollback path?"
     route_plan = RoutePlanner().plan(query)
+    route_plan = replace(
+        route_plan,
+        sources=[
+            replace(s, enabled=False) if s.source == "raw_message_span" else s
+            for s in route_plan.sources
+        ],
+    )
     candidates = RetrieverDispatcher(
         database,
         retrievers={
@@ -78,11 +85,9 @@ def test_finalized_previous_gist_expands_to_exact_raw_context(
         candidate
         for candidate in result.context_packet.candidates
         if candidate.source == "raw_message_span"
+        and candidate.metadata.get("parent_gist_id") is not None
     )
-    assert (
-        "user: The release phrase is preserve every rollback path."
-        in raw.content
-    )
+    assert "user: The release phrase is preserve every rollback path." in raw.content
     assert raw.source_message_ids == [first_id, second_id]
     parent_gist_id = raw.metadata["parent_gist_id"]
     assert parent_gist_id is not None
@@ -90,8 +95,7 @@ def test_finalized_previous_gist_expands_to_exact_raw_context(
     assert raw.metadata["start_message_id"] == first_id
     assert raw.metadata["end_message_id"] == second_id
     assert any(
-        item["record_id"] == parent_gist_id
-        and item["reason"] == "folded_into_raw_child"
+        item["record_id"] == parent_gist_id and item["reason"] == "folded_into_raw_child"
         for item in result.context_packet.metadata["dropped_candidates"]
     )
     assert result.context_budget.source_token_budgets["previous_chat_gist"] > 0
@@ -202,10 +206,7 @@ def test_overlapping_gist_expansions_merge_and_preserve_parent_links(
 ) -> None:
     database = Database(tmp_path / "chatbot.db")
     database.create_chat("chat")
-    ids = [
-        database.save_message("chat", "user", f"message {index}")
-        for index in range(6)
-    ]
+    ids = [database.save_message("chat", "user", f"message {index}") for index in range(6)]
     first = MemoryCandidate(
         source="previous_chat_gist",
         content="First orientation.",
@@ -374,10 +375,7 @@ def test_adjacent_gists_keep_independent_query_centered_windows(
     ]
     assert ids[2] in expanded[0].source_message_ids
     assert ids[9] in expanded[1].source_message_ids
-    assert all(
-        candidate.metadata["omitted_message_ids_count"] == 3
-        for candidate in expanded
-    )
+    assert all(candidate.metadata["omitted_message_ids_count"] == 3 for candidate in expanded)
 
     route_plan = RoutePlan(
         query="shared retrieval phrase",
@@ -391,23 +389,27 @@ def test_adjacent_gists_keep_independent_query_centered_windows(
         ],
         context_profile="memory_recall",
     )
-    packet = ContextManagerAgent(
-        budget_allocator=ContextBudgetAllocator(
-            policy=ContextBudgetPolicy(
-                default_model_context_limit=600,
-                default_answer_reserve=100,
-            )
-        ),
-        context_builder=ContextBuilder(),
-    ).build_context_packet(
-        system_prompt="Use exact raw evidence.",
-        latest_user_message={
-            "role": "user",
-            "content": "shared retrieval phrase",
-        },
-        ranked_candidates=expanded,
-        route_plan=route_plan,
-    ).context_packet
+    packet = (
+        ContextManagerAgent(
+            budget_allocator=ContextBudgetAllocator(
+                policy=ContextBudgetPolicy(
+                    default_model_context_limit=600,
+                    default_answer_reserve=100,
+                )
+            ),
+            context_builder=ContextBuilder(),
+        )
+        .build_context_packet(
+            system_prompt="Use exact raw evidence.",
+            latest_user_message={
+                "role": "user",
+                "content": "shared retrieval phrase",
+            },
+            ranked_candidates=expanded,
+            route_plan=route_plan,
+        )
+        .context_packet
+    )
 
     assert any(
         candidate.source == "raw_message_span"
@@ -419,10 +421,7 @@ def test_adjacent_gists_keep_independent_query_centered_windows(
 def test_window_diagnostics_are_bounded(tmp_path: Path) -> None:
     database = Database(tmp_path / "chatbot.db")
     database.create_chat("chat")
-    ids = [
-        database.save_message("chat", "user", f"message {index}")
-        for index in range(40)
-    ]
+    ids = [database.save_message("chat", "user", f"message {index}") for index in range(40)]
     gist = MemoryCandidate(
         source="previous_chat_gist",
         content="Large provenance.",
@@ -478,8 +477,12 @@ def test_current_gist_expands_only_when_source_is_explicitly_enabled(
         explicitly_enable_source(default_plan, "current_chat_gist"),
     )
 
-    assert default_candidates == []
-    assert {candidate.source for candidate in enabled_candidates} == {
+    assert not [c for c in default_candidates if c.source == "current_chat_gist"]
+    assert {
+        candidate.source
+        for candidate in enabled_candidates
+        if candidate.source in {"current_chat_gist", "raw_message_span"}
+    } == {
         "current_chat_gist",
         "raw_message_span",
     }
@@ -487,6 +490,7 @@ def test_current_gist_expands_only_when_source_is_explicitly_enabled(
         candidate
         for candidate in enabled_candidates
         if candidate.source == "raw_message_span"
+        and candidate.metadata.get("parent_gist_id") is not None
     )
     assert "user: The active task codename is topaz." in raw.content
     assert raw.metadata["parent_source"] == "current_chat_gist"

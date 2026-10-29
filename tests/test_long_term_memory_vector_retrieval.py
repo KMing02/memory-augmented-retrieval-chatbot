@@ -11,7 +11,6 @@ from src.memory.long_term_store import (
 )
 from src.memory.long_term_vector_index import (
     LongTermMemoryVectorIndex,
-    VectorIndexBackend,
     VectorIndexUnavailable,
     memory_record_to_index_text,
 )

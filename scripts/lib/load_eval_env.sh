@@ -12,6 +12,10 @@ eval_repo_root() {
 }
 
 load_eval_env() {
+  # Honour the same explicit dotenv opt-out as the Python application.
+  if [[ "${PYTHON_DOTENV_DISABLED:-0}" == "1" ]]; then
+    return 0
+  fi
   local env_file="$REPO_ROOT/.env"
   if [[ ! -f "$env_file" ]]; then
     return 0

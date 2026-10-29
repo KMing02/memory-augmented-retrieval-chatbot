@@ -9,7 +9,6 @@ from src.config import AppConfig
 from src.connection_guard import (
     ConnectionGuard,
     InferenceServerUnreachable,
-    connection_guard_from_env,
 )
 
 _M_REQUEST_TIMEOUT = float(os.environ.get("MODEL_REQUEST_TIMEOUT", "35"))

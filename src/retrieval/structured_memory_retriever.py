@@ -79,10 +79,18 @@ class StructuredMemoryRetriever:
         db_records: list[LongTermMemoryRecord] = []
         for namespace in structured_memory_namespaces(chat_id):
             db_records.extend(self.long_term_store.list(namespace))
-        db_active = {record.memory_id: record for record in db_records if record.status == "active"}
+        db_known = {record.memory_id: record for record in db_records}
+        db_active = {
+            record.memory_id: record
+            for record in db_records
+            if record.status == "active" and not record.is_expired()
+        }
         candidates: list[MemoryCandidate] = []
         seen_ids: set[str] = set()
         for record in active_memories(memory_state):
+            known = db_known.get(str(record["id"]))
+            if known is not None and (known.status != "active" or known.is_expired()):
+                continue
             seen_ids.add(str(record["id"]))
             source_message_ids = record.get("source_message_ids", [])
             confidence = record.get("confidence")
@@ -191,7 +199,7 @@ class StructuredMemoryRetriever:
             if namespace_path(result.namespace) not in allowed_namespaces:
                 continue
             record = self.long_term_store.get(result.namespace, result.memory_id)
-            if record is None:
+            if record is None or record.status != "active" or record.is_expired():
                 continue
             metadata = dict(record.metadata)
             metadata.update(

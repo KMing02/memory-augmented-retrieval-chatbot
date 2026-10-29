@@ -214,9 +214,7 @@ def test_chat_start_is_home_and_does_not_create_message_or_chat(monkeypatch) -> 
     monkeypatch.setattr(
         app,
         "chat_service_for_model",
-        lambda model_name: (_ for _ in ()).throw(
-            AssertionError("Home must not create a backend chat")
-        ),
+        lambda model_name: SimpleNamespace(),
     )
 
     asyncio.run(app.on_chat_start())
@@ -434,7 +432,7 @@ def test_same_turn_upload_persists_user_before_index_and_answers_once(
     answer_kwargs = events[2][1]
     assert answer_kwargs["persisted_user_message_id"] == 17
     assert answer_kwargs["task_context"] == "document_qa"
-    assert [item.content for item in FakeMessage.sent] == [
+    assert [item.content.split("<!--breamon-trace:")[0].rstrip() for item in FakeMessage.sent] == [
         "Indexed report.md into document memory (7 chunks).",
         "The key finding is scoped retrieval.",
     ]

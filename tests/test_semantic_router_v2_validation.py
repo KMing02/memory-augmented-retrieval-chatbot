@@ -64,8 +64,7 @@ def run_semantic_graph(
     [
         (
             "What exact phrase did I use about router principle?",
-            "My router principle is: gist tells where to look, "
-            "span proves exact content.",
+            "My router principle is: gist tells where to look, span proves exact content.",
         ),
         (
             "How did I phrase the memory rule?",
@@ -122,19 +121,14 @@ def test_same_chat_quote_paraphrases_reach_exact_raw_span(
     raw_span = next(
         candidate
         for candidate in state["context_packet"].candidates
-        if candidate.source == "current_chat_span"
-        and exact_sentence in candidate.content
+        if candidate.source == "current_chat_span" and exact_sentence in candidate.content
     )
     assert raw_span.chat_id == "active-chat"
     assert exact_id in raw_span.source_message_ids
     assert state["insufficient_evidence"] is False
     assert state["mock_answer"].startswith("MOCK ANSWER:")
 
-    generated_queries = {
-        item.text
-        for item in semantic_plan.retrieval_queries
-        if item.is_generated
-    }
+    generated_queries = {item.text for item in semantic_plan.retrieval_queries if item.is_generated}
     assert generated_queries
     assert all(
         candidate.content not in generated_queries
@@ -148,9 +142,7 @@ def test_previous_chat_quote_expands_finalized_gist_to_raw_span(
 ) -> None:
     database = Database(tmp_path / "chatbot.db")
     database.create_chat("ended-chat")
-    exact_sentence = (
-        "My previous router principle is: preserve provenance before compression."
-    )
+    exact_sentence = "My previous router principle is: preserve provenance before compression."
     first_id = database.save_message("ended-chat", "user", exact_sentence)
     second_id = database.save_message("ended-chat", "assistant", "Recorded.")
 
@@ -174,14 +166,12 @@ def test_previous_chat_quote_expands_finalized_gist_to_raw_span(
     )
 
     assert state["semantic_route_plan"].intents[0].intent == EXACT_QUOTE
-    assert any(
-        candidate.source == "previous_chat_gist"
-        for candidate in state["candidates"]
-    )
+    assert any(candidate.source == "previous_chat_gist" for candidate in state["candidates"])
     raw_span = next(
         candidate
         for candidate in state["context_packet"].candidates
         if candidate.source == "raw_message_span"
+        and candidate.metadata.get("parent_gist_id") is not None
     )
     assert exact_sentence in raw_span.content
     assert raw_span.source_message_ids == [first_id, second_id]
@@ -244,4 +234,3 @@ def test_casual_chat_uses_only_recent_messages_in_semantic_graph(
     assert "document_memory" not in state["trace"]["route_sources"]
     assert state["insufficient_evidence"] is False
     assert state["mock_answer"].startswith("MOCK ANSWER:")
-

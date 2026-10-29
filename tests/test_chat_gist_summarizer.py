@@ -273,10 +273,7 @@ def test_current_chat_gist_processor_is_disabled_by_default(
     assert result.created is False
     assert result.skipped_reason == "current_chat_gist_disabled"
     assert db.chat_gists_for_chat("chat", "current_chat_gist") == []
-    assert all(
-        not message.gist_processed
-        for message in db.messages_for_chat("chat")
-    )
+    assert all(not message.gist_processed for message in db.messages_for_chat("chat"))
 
 
 def test_repeated_current_chat_gist_batch_does_not_duplicate_processed_span(
@@ -327,24 +324,23 @@ def test_current_chat_gist_is_not_routed_into_default_context(
         },
     ).retrieve("chat", route_plan)
 
-    context = ContextManagerAgent().build_context_packet(
-        system_prompt="Use available context.",
-        latest_user_message={"role": "user", "content": query},
-        ranked_candidates=candidates,
-        route_plan=route_plan,
-    ).context_packet
+    context = (
+        ContextManagerAgent()
+        .build_context_packet(
+            system_prompt="Use available context.",
+            latest_user_message={"role": "user", "content": query},
+            ranked_candidates=candidates,
+            route_plan=route_plan,
+        )
+        .context_packet
+    )
 
     current_gist_plan = next(
-        source
-        for source in route_plan.sources
-        if source.source == "current_chat_gist"
+        source for source in route_plan.sources if source.source == "current_chat_gist"
     )
     assert current_gist_plan.enabled is False
-    assert candidates == []
-    assert all(
-        candidate.source != "current_chat_gist"
-        for candidate in context.candidates
-    )
+    assert not [c for c in candidates if c.source == "current_chat_gist"]
+    assert all(candidate.source != "current_chat_gist" for candidate in context.candidates)
 
 
 def test_chat_end_finalizes_only_messages_pending_after_rolling_gist(
@@ -379,10 +375,7 @@ def test_chat_end_finalizes_only_messages_pending_after_rolling_gist(
         previous_gists[0].start_message_id,
         previous_gists[0].end_message_id,
     ) == (ids[2], ids[5])
-    assert all(
-        message.gist_processed
-        for message in db.messages_for_chat("chat")
-    )
+    assert all(message.gist_processed for message in db.messages_for_chat("chat"))
     assert [chat["id"] for chat in db.list_inactive_chats()] == ["chat"]
 
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Sequence
 
 from src.context.context_builder import recent_message_sort_key
@@ -825,6 +825,11 @@ def merge_retrieval_paths(
     keeper: MemoryCandidate,
     duplicate: MemoryCandidate,
 ) -> None:
+    # A direct span and gist expansion can identify the same evidence. Keep the
+    # parent relation when deduplicating, so inspector provenance is not lost.
+    for key in ("parent_gist_id", "parent_gist_ids", "parent_source", "parent_sources"):
+        if key not in keeper.metadata and key in duplicate.metadata:
+            keeper.metadata[key] = duplicate.metadata[key]
     paths: list[str] = []
     for candidate in (keeper, duplicate):
         values = candidate.metadata.get("retrieval_paths")

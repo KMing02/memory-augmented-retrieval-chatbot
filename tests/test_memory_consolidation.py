@@ -11,12 +11,10 @@ from src.memory.long_term_store import (
     DEFAULT_USER_NAMESPACE,
     LongTermMemoryWrite,
     SQLiteLongTermMemoryStore,
-    namespace_path,
 )
 from src.memory.long_term_vector_index import (
     LongTermMemoryVectorIndex,
     VectorIndexUnavailable,
-    memory_record_to_index_text,
 )
 from src.memory.structured_memory_vector_sync import StructuredMemoryVectorSync
 

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
 
 from src.agents.context_manager_agent import ContextManagerAgent
 from src.core.contracts import SourcePlan
@@ -16,7 +15,6 @@ from src.memory.long_term_store import (
 )
 from src.memory.long_term_vector_index import (
     LongTermMemoryVectorIndex,
-    VectorIndexBackend,
     VectorIndexUnavailable,
     memory_record_to_index_text,
 )
@@ -108,8 +106,8 @@ def memory_write(
 ) -> LongTermMemoryWrite:
     return LongTermMemoryWrite(
         namespace=DEFAULT_USER_NAMESPACE,
-        memory_id="preferences:libraries",
-        category="preferences",
+        memory_id="user_preferences:libraries",
+        category="user_preferences",
         key="libraries",
         value=value,
         confidence=0.9,
@@ -166,7 +164,7 @@ def test_langmem_production_write_syncs_insert_with_typed_metadata(
         manager=FakeLangMemManager(
             [
                 {
-                    "category": "preferences",
+                    "category": "user_preferences",
                     "key": "libraries",
                     "value": "User prefers mature open-source libraries.",
                     "source_message_ids": [message_id],
@@ -184,10 +182,10 @@ def test_langmem_production_write_syncs_insert_with_typed_metadata(
     assert result.accepted is True
     assert len(backend.vectors) == 1
     # Verify the vector was stored with correct rowid
-    records = store.list(DEFAULT_USER_NAMESPACE)
+    records = store.list(("memory", "user_preferences"))
     assert len(records) == 1
     assert records[0].rowid in backend.vectors
-    assert records[0].memory_id == "preferences:libraries"
+    assert records[0].memory_id == "user_preferences:libraries"
 
 
 def test_update_replaces_stable_vector_entry_without_stale_text(
@@ -226,12 +224,12 @@ def test_delete_and_inactive_upsert_remove_vector_entry_idempotently(
     backend.add_vectors([(rowid, b"")])  # type: ignore[arg-type]
 
     store.upsert(memory_write(status="inactive"))
-    store.delete(DEFAULT_USER_NAMESPACE, "preferences:libraries")
-    store.delete(DEFAULT_USER_NAMESPACE, "preferences:libraries")
+    store.delete(DEFAULT_USER_NAMESPACE, "user_preferences:libraries")
+    store.delete(DEFAULT_USER_NAMESPACE, "user_preferences:libraries")
 
     assert rowid not in backend.vectors
     assert len(backend.delete_calls) >= 1
-    record = store.get(DEFAULT_USER_NAMESPACE, "preferences:libraries")
+    record = store.get(DEFAULT_USER_NAMESPACE, "user_preferences:libraries")
     assert record is not None
     assert record.status == "deleted"
 
@@ -253,6 +251,7 @@ def test_repeated_sync_is_idempotent_by_stable_vector_id(tmp_path: Path) -> None
 
 def test_vector_failure_is_explicit_but_sqlite_mode_requires_no_backend(
     tmp_path: Path,
+    caplog,
 ) -> None:
     database = Database(tmp_path / "chatbot.db")
     failing_store = SQLiteLongTermMemoryStore(
@@ -262,15 +261,13 @@ def test_vector_failure_is_explicit_but_sqlite_mode_requires_no_backend(
         ),
     )
 
-    with pytest.raises(
-        StructuredMemoryVectorSyncError,
-        match="SQLite write committed, but vector sync failed",
-    ):
-        failing_store.upsert(memory_write())
+    failing_store.upsert(memory_write())
+    assert isinstance(failing_store.last_sync_error, StructuredMemoryVectorSyncError)
+    assert "vector synchronization failed" in caplog.text
 
     committed = failing_store.get(
         DEFAULT_USER_NAMESPACE,
-        "preferences:libraries",
+        "user_preferences:libraries",
     )
     assert committed is not None
     sqlite_only_store = SQLiteLongTermMemoryStore(
@@ -280,8 +277,8 @@ def test_vector_failure_is_explicit_but_sqlite_mode_requires_no_backend(
     sqlite_only_store.upsert(
         LongTermMemoryWrite(
             namespace=DEFAULT_USER_NAMESPACE,
-            memory_id="preferences:answers",
-            category="preferences",
+            memory_id="user_preferences:answers",
+            category="user_preferences",
             key="answers",
             value="User prefers concise answers.",
         )
@@ -289,7 +286,7 @@ def test_vector_failure_is_explicit_but_sqlite_mode_requires_no_backend(
     assert (
         sqlite_only_store.get(
             DEFAULT_USER_NAMESPACE,
-            "preferences:answers",
+            "user_preferences:answers",
         )
         is not None
     )
@@ -302,8 +299,8 @@ def test_backfill_repairs_missing_entries_without_duplicates(tmp_path: Path) -> 
     store.upsert(
         LongTermMemoryWrite(
             namespace=DEFAULT_USER_NAMESPACE,
-            memory_id="preferences:answers",
-            category="preferences",
+            memory_id="user_preferences:answers",
+            category="user_preferences",
             key="answers",
             value="User prefers concise answers.",
         )
@@ -354,12 +351,12 @@ def test_synced_vector_memory_reaches_context_with_sqlite_provenance(
     )
 
     assert len(candidates) == 1
-    assert candidates[0].record_id == "preferences:libraries"
+    assert candidates[0].record_id == "user_preferences:libraries"
     assert candidates[0].chat_id == "chat-1"
     assert candidates[0].source_message_ids == [1]
     assert candidates[0].metadata["retrieval_mode"] == "vector"
     assert any(
-        candidate.record_id == "preferences:libraries"
+        candidate.record_id == "user_preferences:libraries"
         for candidate in result.context_packet.candidates
     )
     assert sum(result.context_budget.source_token_budgets.values()) <= int(
@@ -386,6 +383,6 @@ def test_sqlite_recall_remains_independent_of_vector_backend(
     )
 
     assert len(candidates) == 1
-    assert candidates[0].record_id == "preferences:libraries"
+    assert candidates[0].record_id == "user_preferences:libraries"
     assert candidates[0].source == "structured_memory"
     assert candidates[0].metadata["namespace"] == list(DEFAULT_USER_NAMESPACE)

@@ -135,9 +135,9 @@ class LongTermMemoryVectorIndex:
                 rows.append((record.rowid, blob))  # type: ignore[arg-type]
             with self._vec_connect() as conn:
                 conn.executemany(
-                    f"INSERT OR REPLACE INTO {VEC_TABLE}(rowid, embedding) VALUES (?, ?)",
-                    rows,
+                    f"DELETE FROM {VEC_TABLE} WHERE rowid = ?", [(r[0],) for r in rows]
                 )
+                conn.executemany(f"INSERT INTO {VEC_TABLE}(rowid, embedding) VALUES (?, ?)", rows)
 
         return LongTermMemoryIndexResult(
             indexed_count=len(active_records),
@@ -156,8 +156,11 @@ class LongTermMemoryVectorIndex:
         embedding = self._embeddings().embed_query(memory_record_to_index_text(record))
         blob = np.array(embedding, dtype=np.float32).tobytes()
         with self._vec_connect() as conn:
+            # vec0 does not implement SQLite's INSERT OR REPLACE semantics.
+            # Delete + insert in one transaction preserves the stable relational ID.
+            conn.execute(f"DELETE FROM {VEC_TABLE} WHERE rowid = ?", [record.rowid])
             conn.execute(
-                f"INSERT OR REPLACE INTO {VEC_TABLE}(rowid, embedding) VALUES (?, ?)",
+                f"INSERT INTO {VEC_TABLE}(rowid, embedding) VALUES (?, ?)",
                 [record.rowid, blob],
             )
 

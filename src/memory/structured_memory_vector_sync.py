@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Any, Protocol
 
 from src.memory.long_term_store import LongTermMemoryRecord, LongTermMemoryStore
 from src.memory.long_term_vector_index import (
@@ -37,7 +37,6 @@ class StructuredMemoryVectorSync:
     @classmethod
     def from_env(cls, database: "Any" = None) -> "StructuredMemoryVectorSync":
         """Create the configured long-term-memory vector synchronization adapter."""
-        from src.memory.long_term_vector_index import LongTermMemoryVectorIndex
 
         return cls(vector_index=LongTermMemoryVectorIndex.from_env(database=database))
 

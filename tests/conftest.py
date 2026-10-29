@@ -33,6 +33,7 @@ def pytest_configure(config):
             _environment.delenv(key, raising=False)
     for key, value in {
         "PYTHON_DOTENV_DISABLED": "1",
+        "STRUCTURED_MEMORY_RETRIEVAL_MODE": "sqlite",
         "LLM_PROVIDER": "custom",
         "OPENAI_API_KEY": "dummy",
         "DEEPSEEK_API_KEY": "dummy",

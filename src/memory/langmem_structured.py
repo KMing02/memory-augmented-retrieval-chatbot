@@ -10,7 +10,6 @@ from pydantic import BaseModel, Field
 from src.connection_guard import (
     ConnectionGuard,
     InferenceServerUnreachable,
-    connection_guard_from_env,
 )
 from src.database import StoredMessage
 from src.providers import resolve_provider
@@ -287,7 +286,9 @@ class LangMemStructuredMemoryState:
         self._manager = manager
         self._config = config or LangMemBackendConfig.from_env()
         self._long_term_store = long_term_store
-        self._guard = connection_guard or connection_guard_from_env()
+        self._guard = connection_guard or (
+            ConnectionGuard(self._config.openai_base_url) if manager is None else None
+        )
         self.last_saved_records: list[LongTermMemoryWrite] = []
         self.last_drops: list[dict[str, Any]] = []
 
@@ -317,7 +318,8 @@ class LangMemStructuredMemoryState:
             normalized_memory["memories"],
         )
         try:
-            self._guard.check()
+            if self._guard is not None:
+                self._guard.check()
         except InferenceServerUnreachable as exc:
             return MemoryUpdateResult(
                 memory_state={"memories": combined_existing_records},

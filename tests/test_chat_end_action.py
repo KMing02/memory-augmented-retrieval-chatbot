@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import pytest
@@ -13,7 +13,6 @@ from src.memory.previous_chat_gist import (
     PreviousChatGistGenerator,
 )
 from src.memory.short_term import (
-    ChatEndMemoryProcessingError,
     ChatEndMemoryProcessingResult,
     ShortTermMemory,
 )
@@ -459,6 +458,13 @@ def test_finalized_previous_chat_gist_reaches_context_packet(
     database.create_chat("current-chat")
     query = "What did we discuss last time about the release codename?"
     route_plan = RoutePlanner().plan(query)
+    route_plan = replace(
+        route_plan,
+        sources=[
+            replace(s, enabled=False) if s.source == "raw_message_span" else s
+            for s in route_plan.sources
+        ],
+    )
     candidates = RetrieverDispatcher(
         database,
         retrievers={
@@ -478,7 +484,10 @@ def test_finalized_previous_chat_gist_reaches_context_packet(
     )
 
     raw_spans = [
-        candidate for candidate in context.candidates if candidate.source == "raw_message_span"
+        candidate
+        for candidate in context.candidates
+        if candidate.source == "raw_message_span"
+        and candidate.metadata.get("parent_gist_id") is not None
     ]
     assert len(raw_spans) == 1
     assert "cobalt" in raw_spans[0].content

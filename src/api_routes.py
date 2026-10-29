@@ -4,6 +4,7 @@ import chainlit as cl
 from fastapi.responses import FileResponse, JSONResponse
 from pathlib import Path
 from src.database import Database
+from src.actions.chat_end import ChatEndAction
 from src.lifecycle.operation_guard import guarded_chat_operation
 from typing import Any
 
@@ -104,7 +105,12 @@ def register_api_routes(database: Database, chat_service_getter: Any) -> None:
             chat = get_db().get_chat(chat_id)
             if not chat:
                 return JSONResponse({"error": "not found"}, status_code=404)
-            get_db().mark_chat_inactive(chat_id)
+            if get_db().is_chat_active(chat_id):
+                service = get_chat_svc()
+                factory = getattr(service, "build_previous_chat_gist_generator", None)
+                finalizer = factory() if callable(factory) else None
+                action = ChatEndAction(get_db(), service.memory, gist_finalizer=finalizer)
+                await asyncio.to_thread(action.execute, chat_id)
             return {"status": "ended"}
         except Exception as e:
             return JSONResponse({"error": str(e)}, status_code=500)
@@ -128,9 +134,7 @@ def register_api_routes(database: Database, chat_service_getter: Any) -> None:
                 return JSONResponse({"error": "not found"}, status_code=404)
             svc = get_chat_svc()
             with guarded_chat_operation(svc.database.path, chat_id):
-                result = await asyncio.to_thread(
-                    svc.memory.process_all_for_chat_end, chat_id
-                )
+                result = await asyncio.to_thread(svc.memory.process_all_for_chat_end, chat_id)
             return {
                 "status": "consolidated",
                 "processed": result.processed_message_count,
@@ -280,12 +284,7 @@ def register_api_routes(database: Database, chat_service_getter: Any) -> None:
     @app.post("/api/memories/{memory_id}/deactivate")
     async def deactivate_memory(memory_id: str):
         try:
-            with get_db().connect() as conn:
-                cur = conn.execute(
-                    "UPDATE long_term_memories SET status = 'deleted' WHERE memory_id = ?",
-                    (memory_id,),
-                )
-            if cur.rowcount == 0:
+            if not mutate_memory(get_db(), memory_id, "deleted"):
                 return JSONResponse({"error": "not found"}, status_code=404)
             return {"status": "deactivated"}
         except Exception as e:
@@ -294,12 +293,7 @@ def register_api_routes(database: Database, chat_service_getter: Any) -> None:
     @app.post("/api/memories/{memory_id}/activate")
     async def activate_memory(memory_id: str):
         try:
-            with get_db().connect() as conn:
-                cur = conn.execute(
-                    "UPDATE long_term_memories SET status = 'active' WHERE memory_id = ?",
-                    (memory_id,),
-                )
-            if cur.rowcount == 0:
+            if not mutate_memory(get_db(), memory_id, "active"):
                 return JSONResponse({"error": "not found"}, status_code=404)
             return {"status": "activated"}
         except Exception as e:
@@ -308,12 +302,7 @@ def register_api_routes(database: Database, chat_service_getter: Any) -> None:
     @app.delete("/api/memories/{memory_id}")
     async def delete_memory(memory_id: str):
         try:
-            with get_db().connect() as conn:
-                cur = conn.execute(
-                    "DELETE FROM long_term_memories WHERE memory_id = ?",
-                    (memory_id,),
-                )
-            if cur.rowcount == 0:
+            if not mutate_memory(get_db(), memory_id, None):
                 return JSONResponse({"error": "not found"}, status_code=404)
             return {"status": "deleted"}
         except Exception as e:
@@ -376,3 +365,60 @@ def register_api_routes(database: Database, chat_service_getter: Any) -> None:
     # Move our newly added routes to the beginning, or at least before the catch-all
     new_routes = app.router.routes[initial_route_count:]
     app.router.routes = new_routes + app.router.routes[:initial_route_count]
+
+
+def mutate_memory(database: Database, memory_id: str, status: str | None) -> bool:
+    """Invalidate vectors while the relational row ID is still available.
+
+    Explicit UI changes fail before relational mutation if vector cleanup fails.
+    Search always validates the surviving relational record as source of truth.
+    """
+    import json
+    from dataclasses import replace
+    from src.memory.long_term_store import SQLiteLongTermMemoryStore
+    from src.memory.long_term_vector_index import LongTermMemoryVectorIndex
+
+    with database.connect() as conn:
+        rows = conn.execute(
+            "SELECT namespace_json FROM long_term_memories WHERE memory_id = ?", (memory_id,)
+        ).fetchall()
+        indexed = (
+            conn.execute("SELECT 1 FROM sqlite_master WHERE name = 'vec_memories'").fetchone()
+            is not None
+        )
+    store = SQLiteLongTermMemoryStore(database, retrieval_mode="sqlite")
+    index = LongTermMemoryVectorIndex.from_env(database) if indexed else None
+    for row in rows:
+        namespace = tuple(json.loads(row["namespace_json"]))
+        record = store.get(namespace, memory_id)
+        if index is not None:
+            if status == "active":
+                index.upsert_record(replace(record, status="active"))
+            else:
+                index.delete_record(namespace, memory_id)
+        with database.connect() as conn:
+            if status != "active":
+                from src.memory.structured_state import normalize_memory_state
+
+                for snapshot in conn.execute(
+                    "SELECT chat_id, memory_json FROM chat_memory_state"
+                ).fetchall():
+                    state = normalize_memory_state(json.loads(snapshot["memory_json"]))
+                    memories = state["memories"]
+                    remaining = [m for m in memories if m.get("id") != memory_id]
+                    if len(remaining) != len(memories):
+                        conn.execute(
+                            "UPDATE chat_memory_state SET memory_json = ? WHERE chat_id = ?",
+                            (json.dumps({"memories": remaining}), snapshot["chat_id"]),
+                        )
+            if status is None:
+                conn.execute(
+                    "DELETE FROM long_term_memories WHERE namespace_path = ? AND memory_id = ?",
+                    ("::".join(namespace), memory_id),
+                )
+            else:
+                conn.execute(
+                    "UPDATE long_term_memories SET status = ? WHERE namespace_path = ? AND memory_id = ?",
+                    (status, "::".join(namespace), memory_id),
+                )
+    return bool(rows)

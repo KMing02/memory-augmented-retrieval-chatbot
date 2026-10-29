@@ -85,8 +85,8 @@ def test_compact_cross_chat_document_and_casual_demo_regression(
             {
                 "memories": [
                     {
-                        "id": "preferences:architecture",
-                        "category": "preferences",
+                        "id": "user_preferences:architecture",
+                        "category": "user_preferences",
                         "key": "architecture",
                         "value": "Keep typed memory source semantics.",
                         "confidence": 0.95,
@@ -155,8 +155,7 @@ def test_compact_cross_chat_document_and_casual_demo_regression(
         "multiple",
     }
     assert any(
-        candidate.source == "document_memory"
-        and "Chroma" in candidate.content
+        candidate.source == "document_memory" and "Chroma" in candidate.content
         for candidate in document.context_packet.candidates
     )
     assert any(
@@ -170,6 +169,4 @@ def test_compact_cross_chat_document_and_casual_demo_regression(
         "raw_message_span",
         "current_chat_span",
         "document_memory",
-    } & {
-        candidate.source for candidate in casual.context_packet.candidates
-    }
+    } & {candidate.source for candidate in casual.context_packet.candidates}
