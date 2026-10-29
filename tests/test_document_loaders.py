@@ -192,15 +192,17 @@ def test_loaded_file_indexes_and_retrieves_document_memory_candidate() -> None:
     assert candidate.metadata["retrieval_backend"] == "langchain_chroma"
 
 
-def test_pdf_loader_skips_when_pdf_dependency_unavailable(tmp_path: Path) -> None:
-    pypdf = pytest.importorskip("pypdf")
+def test_pdf_loader_reads_page_with_runtime_dependency(tmp_path: Path) -> None:
+    import fitz
+
     path = tmp_path / "empty.pdf"
-    writer = pypdf.PdfWriter()
-    writer.add_blank_page(width=72, height=72)
-    with path.open("wb") as handle:
-        writer.write(handle)
+    with fitz.open() as document:
+        page = document.new_page()
+        page.insert_text((72, 72), "Synthetic PDF evidence: cobalt.")
+        document.save(path)
 
     loaded = load_document_file(path)
 
     assert loaded.metadata["file_extension"] == ".pdf"
     assert loaded.metadata["page_count"] == 1
+    assert "Synthetic PDF evidence: cobalt." in loaded.text

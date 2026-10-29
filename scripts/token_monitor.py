@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Pi token usage & cache monitor.
+Developer-only Pi session monitor (not chatbot token telemetry).
 
 Reads Pi's .jsonl session files and reports per-session and project-wide
 token costs, cache hit rates, tool usage, and cache-breakage patterns.
@@ -16,7 +16,6 @@ Usage:
 """
 
 import json
-import os
 import sys
 import argparse
 from pathlib import Path
@@ -32,7 +31,7 @@ def _path_to_session_key(path: Path) -> str:
     """Convert a filesystem path to Pi's session directory encoding.
 
     Pi encodes absolute paths as: leading -- for root /, then - as / separator,
-    trailing -- for directories.  E.g. /home/josph/repo -> --home-josph-repo--
+    trailing -- for directories.  E.g. /home/example/repo -> --home-example-repo--
     """
     parts = str(path.resolve()).split("/")
     # parts[0] is '' (empty string before leading /), so parts[1:] are the segments
@@ -202,7 +201,7 @@ def print_session_detail(stats: dict):
     print(f"  Duration:         {duration}  |  Model: {stats['model']}")
     print(f"  Messages:         {stats['messages']}  |  User turns: {stats['turns']}")
     print(f"  Cache resets:     {stats['cache_resets']}  (tool-list changes that broke cache)")
-    print(f"  ---")
+    print("  ---")
     print(f"  Fresh input:      {fmt(stats['total_input'])} tokens")
     print(f"  Cached read:      {fmt(stats['cache_read'])} tokens")
     print(f"  Cached write:     {fmt(stats['cache_write'])} tokens")
@@ -211,7 +210,7 @@ def print_session_detail(stats: dict):
     print(f"  Cache hit rate:   {stats['cache_hit_pct']:.1f}%")
     print(f"  Cost:             {format_cost(stats['cost'])}")
     if stats["tools"]:
-        print(f"\n  Top tool calls:")
+        print("\n  Top tool calls:")
         for tool, count in sorted(stats["tools"].items(), key=lambda x: -x[1])[:15]:
             print(f"    {tool:<30} {count:>4}")
 
@@ -245,7 +244,7 @@ def print_project_summary(project_dir: Path, all_sessions: list[dict]):
     total_cost = sum(s["cost"] for s in all_sessions)
     total_messages = sum(s["messages"] for s in all_sessions)
     total_turns = sum(s["turns"] for s in all_sessions)
-    total_tokens = sum(s["total_tokens"] for s in all_sessions)
+    _total_tokens = sum(s["total_tokens"] for s in all_sessions)
     total_cache_read = sum(s["cache_read"] for s in all_sessions)
     total_input = sum(s["total_input"] for s in all_sessions)
     total_resets = sum(s["cache_resets"] for s in all_sessions)
@@ -265,7 +264,7 @@ def print_project_summary(project_dir: Path, all_sessions: list[dict]):
     print(f"  Total messages:    {fmt(total_messages)}")
     print(f"  Total user turns:  {fmt(total_turns)}")
     print(f"  Cache resets:      {fmt(total_resets)}")
-    print(f"  ---")
+    print("  ---")
     print(f"  Fresh input:       {fmt(total_input)} tokens")
     print(f"  Cached read:       {fmt(total_cache_read)} tokens")
     print(
@@ -277,7 +276,7 @@ def print_project_summary(project_dir: Path, all_sessions: list[dict]):
     print(f"  Avg cost/session:  {format_cost(total_cost / len(all_sessions))}")
 
     if all_tools:
-        print(f"\n  Top tools (project-wide):")
+        print("\n  Top tools (project-wide):")
         for tool, count in sorted(all_tools.items(), key=lambda x: -x[1])[:15]:
             print(f"    {tool:<30} {count:>4}")
 
@@ -344,7 +343,7 @@ def print_cache_trace(session_path: Path):
     ]
 
     turn_tools = _collect_turn_tools(msgs, user_msg_indices)
-    mcp_connects = _extract_mcp_connects(msgs)
+    _mcp_connects = _extract_mcp_connects(msgs)
 
     # Collect ALL tool names seen cumulatively (for "new tools" detection)
     cumulative_tools: set = set()
@@ -373,19 +372,19 @@ def print_cache_trace(session_path: Path):
     print(f"{'=' * 100}")
 
     # Print explanation header
-    print(f"\n  📋 HOW CACHE WORKS:")
-    print(f"  DeepSeek's prefix: [TOOL DEFINITIONS] → [system prompt] → [conversation messages]")
+    print("\n  📋 HOW CACHE WORKS:")
+    print("  DeepSeek's prefix: [TOOL DEFINITIONS] → [system prompt] → [conversation messages]")
     print(
-        f"  Cache BREAKS when: any tool is added/removed, shifting byte positions of everything after."
+        "  Cache BREAKS when: any tool is added/removed, shifting byte positions of everything after."
     )
-    print(f"  Cache PERSISTS when: only new messages are appended (prefix unchanged).")
+    print("  Cache PERSISTS when: only new messages are appended (prefix unchanged).")
     print(
         f"  Activator tools that mutate the tool list: {', '.join(sorted(ACTIVATOR_TOOLS))}, mcp(connect=...)"
     )
 
     # Print activator timeline
     if activator_calls:
-        print(f"\n  ⚡ TOOL-LIST MUTATIONS DETECTED:")
+        print("\n  ⚡ TOOL-LIST MUTATIONS DETECTED:")
         for idx, name, ts in activator_calls:
             # Find which turn this was in
             turn = 1
@@ -394,9 +393,9 @@ def print_cache_trace(session_path: Path):
                     turn = t + 1
             print(f"    MSG {idx} [turn {turn}] [{ts}] → {name}")
     else:
-        print(f"\n  ℹ️  No explicit tool-list mutations detected in this session.")
-        print(f"     Cache resets may be from: DeepSeek server-side eviction,")
-        print(f"     load-balancing to a different node, or implicit tool changes.")
+        print("\n  ℹ️  No explicit tool-list mutations detected in this session.")
+        print("     Cache resets may be from: DeepSeek server-side eviction,")
+        print("     load-balancing to a different node, or implicit tool changes.")
 
     print(
         f"\n  {'TURN':>4} {'MSG#':>5} {'USER_TS':<20} {'GAP':>6} "
@@ -425,7 +424,7 @@ def print_cache_trace(session_path: Path):
         usage = ast_msg.get("message", {}).get("usage", {})
         cr = usage.get("cacheRead", 0)
         inp = usage.get("input", 0)
-        cw = usage.get("cacheWrite", 0)
+        _cw = usage.get("cacheWrite", 0)
         total_in = cr + inp
         hit_pct = cr / total_in * 100 if total_in > 0 else 0
 
@@ -454,12 +453,12 @@ def print_cache_trace(session_path: Path):
 
         # Estimate reset cost: the fresh input that SHOULD have been cached
         reset_cost_tokens = 0
-        reset_cost_dollars = 0.0
+        _reset_cost_dollars = 0.0
         if is_reset and prev_cr > 30000:
             # The conversation that should have been cached = current input
             reset_cost_tokens = inp
             # DeepSeek input: ~$0.27/M tokens, cached: ~$0.01/M → diff ≈ $0.26/M
-            reset_cost_dollars = reset_cost_tokens * 0.26 / 1_000_000
+            _reset_cost_dollars = reset_cost_tokens * 0.26 / 1_000_000
 
         # Cache analysis
         note = ""
@@ -505,10 +504,10 @@ def print_cache_trace(session_path: Path):
         )
 
     # Summary
-    resets = sum(1 for _ in user_msg_indices)
-    print(f"\n  💡 CACHE RESET = cache_read drops to baseline (~29K system prompt only).")
-    print(f"     This means conversation history was NOT cached → recharged at full input price.")
-    print(f"     Each reset costs ~$0.26/M tokens of conversation history.")
+    _resets = sum(1 for _ in user_msg_indices)
+    print("\n  💡 CACHE RESET = cache_read drops to baseline (~29K system prompt only).")
+    print("     This means conversation history was NOT cached → recharged at full input price.")
+    print("     Each reset costs ~$0.26/M tokens of conversation history.")
 
 
 def watch_session(session_path: Path):

@@ -59,11 +59,12 @@ def main() -> None:
 
     print(f"=== Reranker startup mode: {startup_mode} ===")
     print(f"=== Backend:  http://localhost:{port} ===")
-    print(f"=== Frontend: http://localhost:5173 (Vite default) ===\n")
+    print("=== Frontend: http://localhost:5173 (Vite default) ===\n")
 
     frontend = subprocess.Popen(
         ["npm", "run", "dev"],
         cwd=braemon_dir,
+        env={**os.environ, "VITE_BACKEND_URL": f"http://127.0.0.1:{port}"},
         stdout=sys.stdout,
         stderr=sys.stderr,
     )

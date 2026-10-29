@@ -72,11 +72,20 @@ def _seed(database: Database) -> None:
 
 
 def _login(page: Page, url: str) -> None:
-    page.goto(url, wait_until="domcontentloaded")
-    page.get_by_label("Email address").fill("local")
-    page.get_by_label("Password").fill("local")
-    page.get_by_role("button", name="Sign In").click()
-    page.locator("#memory-chatbot-home").wait_for(state="visible")
+    """Authenticate the isolated test user through the real login endpoint.
+
+    This avoids depending on library-owned login form labels. The API request
+    context shares cookies with the browser; production auth is not bypassed.
+    """
+    response = page.context.request.post(
+        url + "/login", form={"username": "local", "password": "local"}, timeout=10000
+    )
+    assert response.ok, f"Synthetic test-user login failed: HTTP {response.status}"
+    user = page.context.request.get(url + "/user", timeout=10000)
+    assert user.ok
+    assert user.json()["identifier"] == "local-user"
+    page.goto(url, wait_until="domcontentloaded", timeout=15000)
+    page.locator("#memory-chatbot-home").wait_for(state="visible", timeout=15000)
 
 
 @pytest.fixture
@@ -100,6 +109,7 @@ def browser_harness(tmp_path: Path, request: pytest.FixtureRequest):
         "CHAINLIT_LOCAL_PASSWORD": "local",
         "PRODUCT_BEHAVIOR_MODEL_EVENT_PATH": str(event_path),
     }
+    server_log = (tmp_path / "chainlit.log").open("w", encoding="utf-8")
     process = subprocess.Popen(
         [
             "uv",
@@ -114,7 +124,7 @@ def browser_harness(tmp_path: Path, request: pytest.FixtureRequest):
         ],
         cwd=ROOT,
         env=env,
-        stdout=subprocess.PIPE,
+        stdout=server_log,
         stderr=subprocess.STDOUT,
         text=True,
     )
@@ -128,6 +138,8 @@ def browser_harness(tmp_path: Path, request: pytest.FixtureRequest):
             headless=_browser_headless(),
         )
         context = browser.new_context()
+        context.set_default_timeout(10000)
+        context.set_default_navigation_timeout(15000)
         context.tracing.start(screenshots=True, snapshots=True)
         page = context.new_page()
         _login(page, url)
@@ -150,6 +162,7 @@ def browser_harness(tmp_path: Path, request: pytest.FixtureRequest):
         except subprocess.TimeoutExpired:
             process.kill()
             process.wait(timeout=5)
+        server_log.close()
 
 
 def test_product_e2e_is_headless_unless_explicitly_opted_in(
@@ -213,9 +226,7 @@ def test_pb_nav_008_reload_restores_navigation(
 ) -> None:
     _open_thread(browser_harness.page, "Ended Alpha")
     browser_harness.page.reload(wait_until="domcontentloaded")
-    browser_harness.page.get_by_text("Ended Alpha question", exact=True).wait_for(
-        state="visible"
-    )
+    browser_harness.page.get_by_text("Ended Alpha question", exact=True).wait_for(state="visible")
     assert browser_harness.page.get_by_text("Active Alpha", exact=True).is_visible()
     assert browser_harness.page.get_by_text("Ended Beta", exact=True).is_visible()
 
@@ -245,9 +256,7 @@ def test_pb_life_005_end_chat_does_not_render_navigation(
     _open_thread(browser_harness.page, "Active Alpha")
     _toolbar_button(browser_harness.page, "End Chat").click()
     _wait_for(lambda: not browser_harness.database.is_chat_active("active-a"))
-    browser_harness.page.locator("body[data-memory-chat-active='false']").wait_for(
-        state="attached"
-    )
+    browser_harness.page.locator("body[data-memory-chat-active='false']").wait_for(state="attached")
     transcript = browser_harness.page.locator("main").inner_text()
     assert "Active Beta" not in transcript
     assert "Ended Beta" not in transcript
@@ -268,16 +277,12 @@ def test_pb_life_009_fork_creates_and_opens_independent_chat(
     before = len(browser_harness.database.list_chats(limit=100))
     previous_url = browser_harness.page.url
     _toolbar_button(browser_harness.page, "Fork Chat").click()
-    _wait_for(
-        lambda: len(browser_harness.database.list_chats(limit=100)) == before + 1
-    )
+    _wait_for(lambda: len(browser_harness.database.list_chats(limit=100)) == before + 1)
     browser_harness.page.wait_for_function(
         "(previous) => window.location.href !== previous",
         arg=previous_url,
     )
-    browser_harness.page.get_by_text("Active Beta question", exact=True).wait_for(
-        state="visible"
-    )
+    browser_harness.page.get_by_text("Active Beta question", exact=True).wait_for(state="visible")
     assert len(browser_harness.database.list_chats(limit=100)) == before + 1
 
 
@@ -296,10 +301,13 @@ def test_product_shell_visual_cleanup_and_toolbar_state(
     assert not page.get_by_text("Default TUM AIR AKG model", exact=False).is_visible()
     assert not page.get_by_text("google/gemma-4-31B-it", exact=False).is_visible()
     assert not page.get_by_text("Chainlit", exact=True).is_visible()
-    assert page.get_by_role(
-        "toolbar",
-        name="Chat lifecycle controls",
-    ).count() == 0
+    assert (
+        page.get_by_role(
+            "toolbar",
+            name="Chat lifecycle controls",
+        ).count()
+        == 0
+    )
     assert "· active" not in page.locator("body").inner_text().lower()
     broken_images = page.locator("header img, #memory-chatbot-home img").evaluate_all(
         "(images) => images.filter((image) => image.complete && image.naturalWidth === 0)"
@@ -318,9 +326,7 @@ def test_product_shell_visual_cleanup_and_toolbar_state(
         "Home",
     ]
     assert toolbar.evaluate("(element) => Boolean(element.closest('main'))")
-    assert toolbar.evaluate(
-        "(element) => getComputedStyle(element).position !== 'fixed'"
-    )
+    assert toolbar.evaluate("(element) => getComputedStyle(element).position !== 'fixed'")
     assert toolbar.get_attribute("data-mount") == "composer"
     header = page.locator("header")
     if header.count():
@@ -340,16 +346,22 @@ def test_product_shell_visual_cleanup_and_toolbar_state(
 
     page.reload(wait_until="domcontentloaded")
     page.get_by_text("Ended Alpha question", exact=True).wait_for(state="visible")
-    assert page.get_by_role(
-        "toolbar",
-        name="Chat lifecycle controls",
-    ).count() == 1
+    assert (
+        page.get_by_role(
+            "toolbar",
+            name="Chat lifecycle controls",
+        ).count()
+        == 1
+    )
     _toolbar_button(page, "Home").click()
     page.locator("#memory-chatbot-home").wait_for(state="visible")
-    assert page.get_by_role(
-        "toolbar",
-        name="Chat lifecycle controls",
-    ).count() == 0
+    assert (
+        page.get_by_role(
+            "toolbar",
+            name="Chat lifecycle controls",
+        ).count()
+        == 0
+    )
 
 
 def test_pb_doc_002_indexing_finishes_before_answer(
@@ -422,9 +434,7 @@ def test_answer_inspector_is_read_only_message_local_and_survives_reload(
     assert page.get_by_role("dialog", name="Answer Inspector").count() == 1
     inspector_box = inspector.bounding_box()
     composer_box = page.locator("#message-composer").bounding_box()
-    toolbar_box = page.get_by_role(
-        "toolbar", name="Chat lifecycle controls"
-    ).bounding_box()
+    toolbar_box = page.get_by_role("toolbar", name="Chat lifecycle controls").bounding_box()
     assert inspector_box is not None
     assert composer_box is not None
     assert toolbar_box is not None
@@ -487,9 +497,7 @@ def test_answer_inspector_shows_cross_chat_provenance(
     composer = page.locator("textarea")
     composer.fill(query)
     composer.press("Enter")
-    page.get_by_text(f"Deterministic answer: {query}", exact=True).wait_for(
-        state="visible"
-    )
+    page.get_by_text(f"Deterministic answer: {query}", exact=True).wait_for(state="visible")
     page.get_by_role("button", name="Inspect answer").click()
     inspector = page.get_by_role("dialog", name="Answer Inspector")
     inspector.wait_for(state="visible")
