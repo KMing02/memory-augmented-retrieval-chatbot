@@ -1,0 +1,318 @@
+{
+  "baseline": "636 passed, 39 failed, 1 skipped before isolation",
+  "note": "Classification of each original failure; final verification is documented in TESTING.md. No historical benchmark rerun is implied.",
+  "failures": [
+    {
+      "test_id": "tests/test_answer_policy_prompts.py::test_production_system_prompt_keeps_abstention_for_missing_evidence",
+      "subsystem": "answer_policy_prompts",
+      "category": "REAL_IMPLEMENTATION_BUG",
+      "root_cause": "Production prompt lost explicit evidence-based abstention/partial-answer instructions.",
+      "production_behavior_wrong": true,
+      "recommended_action": "Restore grounding instructions; keep exact policy checks."
+    },
+    {
+      "test_id": "tests/test_answer_policy_prompts.py::test_generic_answer_policy_qualifies_partial_evidence",
+      "subsystem": "answer_policy_prompts",
+      "category": "REAL_IMPLEMENTATION_BUG",
+      "root_cause": "Production prompt lost explicit evidence-based abstention/partial-answer instructions.",
+      "production_behavior_wrong": true,
+      "recommended_action": "Restore grounding instructions; keep exact policy checks."
+    },
+    {
+      "test_id": "tests/test_chainlit_chat_actions.py::test_chat_start_is_home_and_does_not_create_message_or_chat",
+      "subsystem": "chainlit_chat_actions",
+      "category": "STALE_TEST_EXPECTATION",
+      "root_cause": "Home deliberately preloads ChatService/models without creating a persisted chat; test forbids construction.",
+      "production_behavior_wrong": false,
+      "recommended_action": "Assert database/message invariants while allowing preload."
+    },
+    {
+      "test_id": "tests/test_chainlit_chat_actions.py::test_same_turn_upload_persists_user_before_index_and_answers_once",
+      "subsystem": "chainlit_chat_actions",
+      "category": "STALE_TEST_EXPECTATION",
+      "root_cause": "Assistant output now includes encoded inspector trace comments.",
+      "production_behavior_wrong": false,
+      "recommended_action": "Compare visible answer and assert trace separately."
+    },
+    {
+      "test_id": "tests/test_chainlit_memory_trace_helpers.py::test_orchestration_trace_is_bounded_and_contains_no_evidence_text",
+      "subsystem": "chainlit_memory_trace_helpers",
+      "category": "REAL_IMPLEMENTATION_BUG",
+      "root_cause": "Bounded trace serialization can truncate routing details after large shadow diagnostics.",
+      "production_behavior_wrong": true,
+      "recommended_action": "Prioritize route information in bounded trace serialization."
+    },
+    {
+      "test_id": "tests/test_chat_end_action.py::test_finalized_previous_chat_gist_reaches_context_packet",
+      "subsystem": "chat_end_action",
+      "category": "STALE_TEST_EXPECTATION",
+      "root_cause": "Test selects first raw span, which can be direct retrieval rather than gist-derived evidence.",
+      "production_behavior_wrong": false,
+      "recommended_action": "Disable direct retrieval for dedicated expansion tests; retain provenance checks."
+    },
+    {
+      "test_id": "tests/test_chat_gist_summarizer.py::test_current_chat_gist_is_not_routed_into_default_context",
+      "subsystem": "chat_gist_summarizer",
+      "category": "STALE_TEST_EXPECTATION",
+      "root_cause": "Test selects first raw span, which can be direct retrieval rather than gist-derived evidence.",
+      "production_behavior_wrong": false,
+      "recommended_action": "Disable direct retrieval for dedicated expansion tests; retain provenance checks."
+    },
+    {
+      "test_id": "tests/test_current_chat_span_retriever.py::test_exact_quote_comes_from_raw_current_chat_messages",
+      "subsystem": "current_chat_span_retriever",
+      "category": "STALE_TEST_EXPECTATION",
+      "root_cause": "Source-specific assertion assumes only one enabled source or old default; direct raw/recent retrieval now also runs.",
+      "production_behavior_wrong": false,
+      "recommended_action": "Isolate the source under test; retain exact content, budget and provenance assertions."
+    },
+    {
+      "test_id": "tests/test_current_chat_span_retriever.py::test_current_user_query_is_excluded_from_span_and_context",
+      "subsystem": "current_chat_span_retriever",
+      "category": "STALE_TEST_EXPECTATION",
+      "root_cause": "Source-specific assertion assumes only one enabled source or old default; direct raw/recent retrieval now also runs.",
+      "production_behavior_wrong": false,
+      "recommended_action": "Isolate the source under test; retain exact content, budget and provenance assertions."
+    },
+    {
+      "test_id": "tests/test_current_chat_span_retriever.py::test_current_chat_span_is_disabled_by_default_but_works_when_enabled",
+      "subsystem": "current_chat_span_retriever",
+      "category": "STALE_TEST_EXPECTATION",
+      "root_cause": "Source-specific assertion assumes only one enabled source or old default; direct raw/recent retrieval now also runs.",
+      "production_behavior_wrong": false,
+      "recommended_action": "Isolate the source under test; retain exact content, budget and provenance assertions."
+    },
+    {
+      "test_id": "tests/test_current_chat_span_retriever.py::test_oversized_span_is_dropped_without_exceeding_context_budget",
+      "subsystem": "current_chat_span_retriever",
+      "category": "STALE_TEST_EXPECTATION",
+      "root_cause": "Source-specific assertion assumes only one enabled source or old default; direct raw/recent retrieval now also runs.",
+      "production_behavior_wrong": false,
+      "recommended_action": "Isolate the source under test; retain exact content, budget and provenance assertions."
+    },
+    {
+      "test_id": "tests/test_e2e_scenarios.py::test_model_mode_accepts_injected_fake_model_without_network",
+      "subsystem": "e2e_scenarios",
+      "category": "REAL_IMPLEMENTATION_BUG",
+      "root_cause": "Offline fixtures persist memories in the legacy namespace, which retrieval excludes.",
+      "production_behavior_wrong": true,
+      "recommended_action": "Restore legacy namespace compatibility without mocking retrieval."
+    },
+    {
+      "test_id": "tests/test_e2e_scenarios.py::test_e2e_report_export_schema",
+      "subsystem": "e2e_scenarios",
+      "category": "REAL_IMPLEMENTATION_BUG",
+      "root_cause": "Offline fixtures persist memories in the legacy namespace, which retrieval excludes.",
+      "production_behavior_wrong": true,
+      "recommended_action": "Restore legacy namespace compatibility without mocking retrieval."
+    },
+    {
+      "test_id": "tests/test_e2e_scenarios.py::test_all_mock_e2e_scenarios_pass",
+      "subsystem": "e2e_scenarios",
+      "category": "REAL_IMPLEMENTATION_BUG",
+      "root_cause": "Offline fixtures persist memories in the legacy namespace, which retrieval excludes.",
+      "production_behavior_wrong": true,
+      "recommended_action": "Restore legacy namespace compatibility without mocking retrieval."
+    },
+    {
+      "test_id": "tests/test_final_eval_wrappers.py::test_zero_exit_with_missing_results_fails_cleanly_without_judge",
+      "subsystem": "final_eval_wrappers",
+      "category": "ENVIRONMENT_OR_OPTIONAL_DEPENDENCY",
+      "root_cause": "Wrapper subprocess uv attempts a separate lockfile environment; offline dependencies unavailable.",
+      "production_behavior_wrong": false,
+      "recommended_action": "Use the running pytest interpreter/environment in subprocess fixtures; no dependency fetch."
+    },
+    {
+      "test_id": "tests/test_final_eval_wrappers.py::test_combined_waits_for_answer_and_hands_exact_path_to_judge",
+      "subsystem": "final_eval_wrappers",
+      "category": "ENVIRONMENT_OR_OPTIONAL_DEPENDENCY",
+      "root_cause": "Wrapper subprocess uv attempts a separate lockfile environment; offline dependencies unavailable.",
+      "production_behavior_wrong": false,
+      "recommended_action": "Use the running pytest interpreter/environment in subprocess fixtures; no dependency fetch."
+    },
+    {
+      "test_id": "tests/test_gist_raw_span_expansion.py::test_finalized_previous_gist_expands_to_exact_raw_context",
+      "subsystem": "gist_raw_span_expansion",
+      "category": "STALE_TEST_EXPECTATION",
+      "root_cause": "Test selects first raw span, which can be direct retrieval rather than gist-derived evidence.",
+      "production_behavior_wrong": false,
+      "recommended_action": "Disable direct retrieval for dedicated expansion tests; retain provenance checks."
+    },
+    {
+      "test_id": "tests/test_gist_raw_span_expansion.py::test_current_gist_expands_only_when_source_is_explicitly_enabled",
+      "subsystem": "gist_raw_span_expansion",
+      "category": "STALE_TEST_EXPECTATION",
+      "root_cause": "Test selects first raw span, which can be direct retrieval rather than gist-derived evidence.",
+      "production_behavior_wrong": false,
+      "recommended_action": "Disable direct retrieval for dedicated expansion tests; retain provenance checks."
+    },
+    {
+      "test_id": "tests/test_langgraph_demo_regression.py::test_compact_cross_chat_document_and_casual_demo_regression",
+      "subsystem": "langgraph_demo_regression",
+      "category": "REAL_IMPLEMENTATION_BUG",
+      "root_cause": "Legacy namespace fixtures no longer reachable by memory retrieval.",
+      "production_behavior_wrong": true,
+      "recommended_action": "Restore namespace compatibility and verify lifecycle regression."
+    },
+    {
+      "test_id": "tests/test_langmem_structured_memory.py::test_short_term_memory_uses_langmem_backend_and_stores_memory",
+      "subsystem": "langmem_structured_memory",
+      "category": "TEST_INFRASTRUCTURE_PROBLEM",
+      "root_cause": "Injected memory manager is preceded by a real endpoint reachability check.",
+      "production_behavior_wrong": false,
+      "recommended_action": "Skip endpoint preflight for explicitly injected manager; preserve it for production."
+    },
+    {
+      "test_id": "tests/test_langmem_structured_memory.py::test_langmem_update_preserves_existing_memory_records",
+      "subsystem": "langmem_structured_memory",
+      "category": "TEST_INFRASTRUCTURE_PROBLEM",
+      "root_cause": "Injected memory manager is preceded by a real endpoint reachability check.",
+      "production_behavior_wrong": false,
+      "recommended_action": "Skip endpoint preflight for explicitly injected manager; preserve it for production."
+    },
+    {
+      "test_id": "tests/test_langmem_structured_memory.py::test_processed_messages_marked_only_after_successful_storage",
+      "subsystem": "langmem_structured_memory",
+      "category": "TEST_INFRASTRUCTURE_PROBLEM",
+      "root_cause": "Injected memory manager is preceded by a real endpoint reachability check.",
+      "production_behavior_wrong": false,
+      "recommended_action": "Skip endpoint preflight for explicitly injected manager; preserve it for production."
+    },
+    {
+      "test_id": "tests/test_long_term_memory_vector_retrieval.py::test_structured_memory_vector_retrieval_returns_expected_memory",
+      "subsystem": "long_term_memory_vector_retrieval",
+      "category": "REAL_IMPLEMENTATION_BUG",
+      "root_cause": "Legacy semantic namespaces remain exported/writable but are excluded from retrieval; fake managers also preflight network.",
+      "production_behavior_wrong": true,
+      "recommended_action": "Restore bounded legacy namespace reads; fix injected manager isolation and test real sqlite-vec writes."
+    },
+    {
+      "test_id": "tests/test_long_term_memory_vector_retrieval.py::test_structured_memory_hybrid_retrieval_deduplicates_by_memory_id",
+      "subsystem": "long_term_memory_vector_retrieval",
+      "category": "REAL_IMPLEMENTATION_BUG",
+      "root_cause": "Legacy semantic namespaces remain exported/writable but are excluded from retrieval; fake managers also preflight network.",
+      "production_behavior_wrong": true,
+      "recommended_action": "Restore bounded legacy namespace reads; fix injected manager isolation and test real sqlite-vec writes."
+    },
+    {
+      "test_id": "tests/test_long_term_memory_vector_retrieval.py::test_structured_memory_vector_retrieval_falls_back_to_sqlite",
+      "subsystem": "long_term_memory_vector_retrieval",
+      "category": "REAL_IMPLEMENTATION_BUG",
+      "root_cause": "Legacy semantic namespaces remain exported/writable but are excluded from retrieval; fake managers also preflight network.",
+      "production_behavior_wrong": true,
+      "recommended_action": "Restore bounded legacy namespace reads; fix injected manager isolation and test real sqlite-vec writes."
+    },
+    {
+      "test_id": "tests/test_long_term_store.py::test_cross_chat_structured_memory_is_visible_across_chats",
+      "subsystem": "long_term_store",
+      "category": "TEST_INFRASTRUCTURE_PROBLEM",
+      "root_cause": "Injected memory manager is preceded by a real endpoint reachability check.",
+      "production_behavior_wrong": false,
+      "recommended_action": "Skip endpoint preflight for explicitly injected manager; preserve it for production."
+    },
+    {
+      "test_id": "tests/test_longmemeval_adapter.py::test_mock_runner_produces_report_without_live_model",
+      "subsystem": "longmemeval_adapter",
+      "category": "REAL_IMPLEMENTATION_BUG",
+      "root_cause": "Adapter reads AppConfig.reranker_cross_encoder_top_k, which does not exist.",
+      "production_behavior_wrong": true,
+      "recommended_action": "Use the supported reranker default explicitly."
+    },
+    {
+      "test_id": "tests/test_longmemeval_adapter.py::test_recent_only_report_and_json_export",
+      "subsystem": "longmemeval_adapter",
+      "category": "REAL_IMPLEMENTATION_BUG",
+      "root_cause": "Adapter reads AppConfig.reranker_cross_encoder_top_k, which does not exist.",
+      "production_behavior_wrong": true,
+      "recommended_action": "Use the supported reranker default explicitly."
+    },
+    {
+      "test_id": "tests/test_longmemeval_adapter.py::test_span_retrieval_mode_uses_raw_message_candidates",
+      "subsystem": "longmemeval_adapter",
+      "category": "REAL_IMPLEMENTATION_BUG",
+      "root_cause": "Adapter reads AppConfig.reranker_cross_encoder_top_k, which does not exist.",
+      "production_behavior_wrong": true,
+      "recommended_action": "Use the supported reranker default explicitly."
+    },
+    {
+      "test_id": "tests/test_memory_context_acceptance.py::test_production_recent_messages_keep_old_fact_and_current_query_once",
+      "subsystem": "memory_context_acceptance",
+      "category": "STALE_TEST_EXPECTATION",
+      "root_cause": "Test hardcodes recent-message window independently of canonical settings.",
+      "production_behavior_wrong": false,
+      "recommended_action": "Make configured window explicit and retain exact query/content deduplication assertions."
+    },
+    {
+      "test_id": "tests/test_semantic_router_v2_validation.py::test_previous_chat_quote_expands_finalized_gist_to_raw_span",
+      "subsystem": "semantic_router_v2_validation",
+      "category": "STALE_TEST_EXPECTATION",
+      "root_cause": "Test selects first raw span, which can be direct retrieval rather than gist-derived evidence.",
+      "production_behavior_wrong": false,
+      "recommended_action": "Disable direct retrieval for dedicated expansion tests; retain provenance checks."
+    },
+    {
+      "test_id": "tests/test_structured_memory_eval.py::test_lifecycle_eval_runs_local_sample_dataset",
+      "subsystem": "structured_memory_eval",
+      "category": "REAL_IMPLEMENTATION_BUG",
+      "root_cause": "Offline fixtures persist memories in the legacy namespace, which retrieval excludes.",
+      "production_behavior_wrong": true,
+      "recommended_action": "Restore legacy namespace compatibility without mocking retrieval."
+    },
+    {
+      "test_id": "tests/test_structured_memory_eval.py::test_structured_memory_eval_runs_local_sample_dataset",
+      "subsystem": "structured_memory_eval",
+      "category": "REAL_IMPLEMENTATION_BUG",
+      "root_cause": "Offline fixtures persist memories in the legacy namespace, which retrieval excludes.",
+      "production_behavior_wrong": true,
+      "recommended_action": "Restore legacy namespace compatibility without mocking retrieval."
+    },
+    {
+      "test_id": "tests/test_structured_memory_vector_sync.py::test_langmem_production_write_syncs_insert_with_typed_metadata",
+      "subsystem": "structured_memory_vector_sync",
+      "category": "TEST_INFRASTRUCTURE_PROBLEM",
+      "root_cause": "Injected memory manager is preceded by a real endpoint reachability check.",
+      "production_behavior_wrong": false,
+      "recommended_action": "Skip endpoint preflight for explicitly injected manager; preserve it for production."
+    },
+    {
+      "test_id": "tests/test_structured_memory_vector_sync.py::test_vector_failure_is_explicit_but_sqlite_mode_requires_no_backend",
+      "subsystem": "structured_memory_vector_sync",
+      "category": "REAL_IMPLEMENTATION_BUG",
+      "root_cause": "Store swallows derived-vector synchronization errors after relational commit.",
+      "production_behavior_wrong": true,
+      "recommended_action": "Surface explicit sync errors; document relational source remains committed."
+    },
+    {
+      "test_id": "tests/test_structured_memory_vector_sync.py::test_synced_vector_memory_reaches_context_with_sqlite_provenance",
+      "subsystem": "structured_memory_vector_sync",
+      "category": "REAL_IMPLEMENTATION_BUG",
+      "root_cause": "Legacy semantic namespaces remain exported/writable but are excluded from retrieval; fake managers also preflight network.",
+      "production_behavior_wrong": true,
+      "recommended_action": "Restore bounded legacy namespace reads; fix injected manager isolation and test real sqlite-vec writes."
+    },
+    {
+      "test_id": "tests/test_structured_memory_vector_sync.py::test_sqlite_recall_remains_independent_of_vector_backend",
+      "subsystem": "structured_memory_vector_sync",
+      "category": "REAL_IMPLEMENTATION_BUG",
+      "root_cause": "Legacy semantic namespaces remain exported/writable but are excluded from retrieval; fake managers also preflight network.",
+      "production_behavior_wrong": true,
+      "recommended_action": "Restore bounded legacy namespace reads; fix injected manager isolation and test real sqlite-vec writes."
+    },
+    {
+      "test_id": "tests/test_targeted_eval_wrapper.py::test_targeted_wrapper_accepts_manifest_in_either_order[arguments0]",
+      "subsystem": "targeted_eval_wrapper",
+      "category": "ENVIRONMENT_OR_OPTIONAL_DEPENDENCY",
+      "root_cause": "Wrapper subprocess uv attempts a separate lockfile environment; offline dependencies unavailable.",
+      "production_behavior_wrong": false,
+      "recommended_action": "Use the running pytest interpreter/environment in subprocess fixtures; no dependency fetch."
+    },
+    {
+      "test_id": "tests/test_targeted_eval_wrapper.py::test_targeted_wrapper_accepts_manifest_in_either_order[arguments1]",
+      "subsystem": "targeted_eval_wrapper",
+      "category": "ENVIRONMENT_OR_OPTIONAL_DEPENDENCY",
+      "root_cause": "Wrapper subprocess uv attempts a separate lockfile environment; offline dependencies unavailable.",
+      "production_behavior_wrong": false,
+      "recommended_action": "Use the running pytest interpreter/environment in subprocess fixtures; no dependency fetch."
+    }
+  ]
+}

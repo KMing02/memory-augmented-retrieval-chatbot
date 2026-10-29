@@ -32,6 +32,9 @@ package = false
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-m 'not browser and not live'"
+markers = ["browser: local browser/server integration", "live: explicit external model/provider integration"]
 
 [tool.ruff]
 line-length = 100

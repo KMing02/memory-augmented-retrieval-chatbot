@@ -163,7 +163,9 @@ class AppConfig:
             document_chunker=settings.DOCUMENT_CHUNKER,
             document_chunk_size=settings.DOCUMENT_CHUNK_SIZE,
             document_chunk_overlap=settings.DOCUMENT_CHUNK_OVERLAP,
-            langchain_chroma_persist_dir=Path(settings.LANGCHAIN_CHROMA_PERSIST_DIR),
+            langchain_chroma_persist_dir=Path(
+                os.getenv("LANGCHAIN_CHROMA_PERSIST_DIR", settings.LANGCHAIN_CHROMA_PERSIST_DIR)
+            ),
             langchain_chunk_size=settings.LANGCHAIN_CHUNK_SIZE,
             langchain_chunk_overlap=settings.LANGCHAIN_CHUNK_OVERLAP,
             # ── orchestration / routing ──
